@@ -1,0 +1,48 @@
+/* ============================================================
+   excabit v2 — Design tokens (fuente de verdad del tema)
+   Aprobados con el mock; se reutilizan tal cual en la app real.
+   Ver docs/06-diseno-ui-ux.md
+   ============================================================ */
+:root {
+  /* Superficies */
+  --bg:         #0d1117;
+  --surface:    #161b22;
+  --surface-2:  #1f2630;
+  --surface-3:  #262e39;
+  --border:     #2d333b;
+
+  /* Texto */
+  --text:       #e6edf3;
+  --text-dim:   #8b949e;
+  --text-faint: #6e7681;
+
+  /* Marca y semántica */
+  --accent:     #f7931a;   /* naranja Bitcoin: CTA, tx raíz, foco */
+  --accent-dim: #b96e13;
+  --input-c:    #3fb950;   /* verde: entradas */
+  --output-c:   #f85149;   /* rojo: salidas */
+  --utxo-c:     #58a6ff;   /* azul: UTXO */
+  --warn:       #d29922;   /* ámbar: heurística detectada */
+  --ok:         #3fb950;
+  --bad:        #f85149;
+
+  /* Tipografía */
+  --font-ui:   "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+
+  /* Métricas */
+  --radius:    8px;
+  --radius-sm: 5px;
+  --topbar-h:  52px;
+  --toolbar-w: 52px;
+  --panel-w:   340px;
+  --status-h:  28px;
+
+  /* Sombras */
+  --shadow-1: 0 2px 8px rgba(0, 0, 0, .45);
+  --shadow-2: 0 8px 30px rgba(0, 0, 0, .6);
+
+  /* Transiciones */
+  --t-fast: 120ms ease;
+  --t-med:  220ms ease;
+}

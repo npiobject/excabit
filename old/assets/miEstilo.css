@@ -1,0 +1,483 @@
+/* Cabecera */
+#container {
+    height      : 0px;
+    width       : 100%;
+    display     : flex;
+    font-family : 'Roboto', sans-serif;
+    visibility:hidden;
+
+}
+
+#logo {
+  width     : 10%;
+  height    : 45px;
+  
+}
+#logo image {
+  margin-top: 0px;
+}
+
+#titulo {
+  width     : 190px;
+  height    : 30px;
+  margin-top: 10px;
+  font-size : 15px;
+}
+#titulo h3 {
+  margin-top: 0px;
+  width     : 190px;
+}
+
+#bloqueTx {
+  width     : 600px;
+  height    : 45px;
+  margin-top: 5px;
+  
+}
+
+#txtIdTx {
+  width       : 620px;
+  height      : 50px;
+  margin-top  : 4px;
+  font-size   : 18px;
+  font-weight : bold;
+  color       : rgba(0, 0, 0, 0.897);
+  text-align  : left;
+  background-color : transparent;
+  outline     : none;
+}
+#txtIdTx:hover {
+  color: #d60b0b83;
+} 
+
+#botonGo{
+  width       : 100px;
+  font-size   : 18px;
+  font-weight : bold;
+  margin-top  : 6px;
+  margin-left : auto; 
+  margin-right: 0;
+}
+
+#idBotonAyuda{
+  /* transition: all .5s ease; */
+  color: rgba(8, 8, 8, 0.733);
+  border: 3px solid rgb(95, 118, 219);
+  text-align: center;
+  line-height: 1;
+  background-color : transparent;
+  font-size   : 14px;
+  outline: none;
+  border-radius: 6px;
+  width: 70px;
+  height: 30px;
+
+}
+#idBotonAyuda:hover {
+  color: #e6e9ec;
+  background-color: rgb(90, 87, 87);
+
+}
+
+/* Primera pantalla */
+.nombreApp{
+  /* transition: all .5s ease; */
+  font-family : 'Roboto' , sans-serif ;
+  /* font-weight : bold; */
+  color: #ffffff;
+  font-size   : 35px;
+  outline: none;
+  height: 47px;
+}
+.inputTx{
+  transition: all 1.5s ease;
+  color: rgba(8, 8, 8, 0.733);
+  border: 3px solid rgb(213, 119, 34);
+  font-size   : 20px;
+  outline: none;
+  border-radius: 6px;
+  height: 37px;
+}
+.inputTx:hover {
+  color: #e6e9ec;
+  background-color: rgb(90, 87, 87);
+}
+
+.botonBuscar{
+  transition: all .5s ease;
+  color: rgba(8, 8, 8, 0.733);
+  border: 3px solid rgb(213, 119, 34);
+  text-align: center;
+  line-height: 1;
+  background-color : transparent;
+  font-size   : 22px;
+  outline: none;
+  border-radius: 6px;
+  width: 100px;
+  height: 44px;
+}
+.botonBuscar:hover {
+  color: #e6e9ec;
+  background-color: rgb(90, 87, 87);
+}
+.botonCargaTx{
+  transition: all .5s ease;
+  /* color: rgba(8, 8, 8, 0.733); */
+  border: 0px solid rgb(213, 119, 34);
+  text-align: center;
+  line-height: 1;
+  background-color : transparent;
+  font-size   : 22px;
+  outline: none;
+  /* border-radius: 6px; */
+  width: 140px;
+  height: 44px;
+}
+.botonCargaTx:hover {
+  color: #e6e9ec;
+  /* background-color: rgb(90, 87, 87); */
+}
+.literalPie{
+  /* transition: all .5s ease; */
+  font-family : 'Roboto', sans-serif;
+  font-weight : bold;
+  color: #fff;
+  font-size   : 15px;
+  outline: none;
+  height: 47px;
+}
+.literalPie:hover {
+  transition: all .5s ease;
+  color: #050116b2;
+}
+
+
+/* Sliders */
+.textTx{
+  height: 5px;
+  font-size   : 18px;
+  color: #00000077;
+}
+.sliderTx{
+  background: #00000077;
+  height: 3px;
+  -webkit-appearance: none;
+  cursor: pointer;
+  width: 80px;
+}
+.sliderTx:focus {
+  outline: none;
+
+}
+.textAddr{
+  height: 5px;
+  font-size   : 18px;
+  color: #00000077;  
+}
+.sliderAddr{
+  background: #00000077;
+  height: 3px;
+  -webkit-appearance: none;
+  cursor: pointer;
+  width: 80px;
+}
+.sliderAddr:focus {
+  outline: none;
+}
+
+/* Botones barra inferior */
+.botonRayado {
+  transition: all .5s ease;
+  color: rgba(8, 8, 8, 0.733);
+  border: 2px solid rgb(95, 118, 219);
+  text-align: center;
+  line-height: 1;
+  background-color : transparent;
+  outline: none;
+  border-radius: 6px;
+  width: 80px;
+  font-size: 15px;
+}
+.botonRayado:hover {
+  color: #e6e9ec;
+  background-color: rgb(90, 87, 87);
+}
+.botonSelec{
+  transition: all .5s ease;
+  color: rgba(8, 8, 8, 0.733);
+  border: 2px solid rgb(95, 118, 219);
+  text-align: center;
+  line-height: 1;
+  background-color : transparent;
+  outline: none;
+  border-radius: 6px;
+  width: 80px;
+  font-size: 15px;
+}
+.botonSelec:hover {
+  color: #e6e9ec;
+  background-color: rgb(90, 87, 87);
+}
+.botonCentra{
+  transition: all .5s ease;
+  color: rgba(8, 8, 8, 0.733);
+  border: 2px solid rgb(95, 118, 219);
+  text-align: center;
+  line-height: 1;
+  background-color : transparent;
+  outline: none;
+  border-radius: 6px;
+  width: 80px;
+  font-size: 15px;
+}
+.botonCentra:hover {
+  color: #e6e9ec;
+  background-color: rgb(90, 87, 87);
+}
+.botonSombra{
+  transition: all .5s ease;
+  color: rgba(8, 8, 8, 0.733);
+  border: 2px solid rgb(95, 118, 219);
+  text-align: center;
+  line-height: 1;
+  background-color : transparent;
+  outline: none;
+  border-radius: 6px;
+  width: 80px;
+  font-size: 15px;
+}
+.botonSombra:hover {
+  color: #e6e9ec;
+  background-color: rgb(90, 87, 87);
+}
+.botonElimina{
+  transition: all .5s ease;
+  color: rgba(8, 8, 8, 0.733);
+  border: 2px solid rgb(95, 118, 219);
+  text-align: center;
+  line-height: 1;
+  background-color : transparent;
+  outline: none;
+  border-radius: 6px;
+  width: 80px;
+  font-size: 15px;
+}
+.botonElimina:hover {
+  color: #e6e9ec;
+  background-color: rgb(90, 87, 87);
+}
+.botonLineas{
+  transition: all .5s ease;
+  color: rgba(8, 8, 8, 0.733);
+  border: 2px solid rgb(95, 118, 219);
+  text-align: center;
+  line-height: 1;
+  background-color : transparent;
+  outline: none;
+  border-radius: 6px;
+  width: 80px;
+  font-size: 15px;
+}
+.botonLineas:hover {
+  color: #e6e9ec;
+  background-color: rgb(90, 87, 87);
+}
+.botonInfo{
+  transition: all .5s ease;
+  color: rgba(8, 8, 8, 0.733);
+  border: 2px solid rgb(95, 118, 219);
+  text-align: center;
+  line-height: 1;
+  background-color : transparent;
+  outline: none;
+  border-radius: 6px;
+  width: 80px;
+  font-size: 15px;
+}
+.botonInfo:hover {
+  color: #e6e9ec;
+  background-color: rgb(90, 87, 87);
+}
+.botonImprimir{
+  transition: all .5s ease;
+  color: rgba(8, 8, 8, 0.733);
+  border: 2px solid rgb(95, 118, 219);
+  text-align: center;
+  line-height: 1;
+  background-color : transparent;
+  outline: none;
+  border-radius: 6px;
+  width: 80px;
+  font-size: 15px;
+}
+.botonImprimir:hover {
+  color: #e6e9ec;
+  background-color: rgb(90, 87, 87);
+}
+.botonVideo{
+  transition: all .5s ease;
+  color: rgba(8, 8, 8, 0.733);
+  border: 2px solid rgb(95, 118, 219);
+  text-align: center;
+  line-height: 1;
+  background-color : transparent;
+  outline: none;
+  border-radius: 6px;
+  width: 80px;
+  font-size: 15px;
+}
+.botonVideo:hover {
+  color: #e6e9ec;
+  background-color: rgb(90, 87, 87);
+}
+.botonSave{
+  transition: all .5s ease;
+  color: rgba(8, 8, 8, 0.733);
+  border: 2px solid rgb(95, 118, 219);
+  text-align: center;
+  line-height: 1;
+  background-color : transparent;
+  outline: none;
+  border-radius: 6px;
+  width: 80px;
+  font-size: 15px;
+}
+.botonSave:hover {
+  color: #e6e9ec;
+  background-color: rgb(90, 87, 87);
+}
+
+
+
+.buttonTag{
+  /* transition: all .5s ease; */
+  color: rgba(8, 8, 8, 0.733);
+  border: 2px solid rgb(95, 118, 219);
+  text-align: center;
+  line-height: 1;
+  background-color : transparent;
+  outline: none;
+  border-radius: 6px;
+  width: 50px;
+  height: 27px;
+  font-size: 15px;
+}
+.buttonTag:hover {
+  color: #e6e9ec;
+  background-color: rgb(90, 87, 87);
+}
+.inputTags{
+  /* transition: all .5s ease; */
+  color: rgba(8, 8, 8, 0.733);
+  border: 3px solid rgb(95, 118, 219);
+  font-size   : 20px;
+  outline: none;
+  border-radius: 6px;
+  height: 21px;
+}
+
+.buttonColor{
+  /* transition: all .5s ease; */
+  border: 2px solid rgb(142, 148, 175);
+  line-height: 1;
+  background-color : transparent;
+  outline: none;
+  border-radius: 6px;
+  width: 30px;
+  font-size: 15px;
+}
+.buttonColor:hover {
+  border: 4px solid rgb(95, 118, 219);
+}
+
+.buttonColor7{
+  /* transition: all .5s ease; */
+  border: 2px solid rgb(142, 148, 175);
+  line-height: 1;
+  background-color : transparent;
+  outline: none;
+  border-radius: 6px;
+  width: 207px;
+  height: 25px;
+  font-size: 15px;
+}
+.buttonColor7:hover {
+  border: 4px solid rgb(95, 118, 219);
+}
+
+
+.divGifAnimado{
+  font-size: 20px;
+  color: #ff0000;
+  /*poner blink*/
+}
+
+.p5c-container{
+  z-index: 999; 
+}
+
+#div_ayuda{
+  margin-top: -4000px;
+  
+}
+
+.literalAyuda{
+  font-size : 22px;
+  font-family: 'Roboto';
+}
+
+.divAyuda{
+  font-size:15px;
+  color: rgba(0, 0, 0, 0.849);
+}
+.divAyuda2{
+  font-size:15px;
+  color: rgba(0, 0, 0, 0.849); 
+}
+
+#botonVideosAyuda{
+  font-size:17px;
+  color: rgba(27, 24, 201, 0.849);
+  border: 1px solid rgba(95, 118, 219, 0.425); 
+  background-color : transparent;
+  width: 110px;
+  height: 23px;
+  text-align: center;
+  padding-top: 0px;
+}
+
+#idPantallaVideo{
+  box-shadow: 5px 5px 40px;   
+}
+
+#idBotonAyudaPrimPan{
+  box-shadow: 5px 5px 40px;  
+  font-size:17px;
+  color: rgba(42, 42, 51, 0.849);
+  border: 1px solid rgba(95, 118, 219, 0.425); 
+  background-color : transparent;
+  width: 110px;
+  height: 23px;
+  text-align: center;
+  padding-top: 0px;   
+}
+#idBotonAyudaPrimPan:hover {
+  border: 2px solid rgb(43, 11, 104);
+}
+
+#idPlay{
+  box-shadow: 5px 5px 40px;  
+  font-size:17px;
+  color: rgba(0, 0, 7, 0.849);
+  border: 1px solid rgba(95, 118, 219, 0.425); 
+  /* background-color : transparent; */
+  width: 110px;
+  height: 23px;
+  text-align: center;
+  padding-top: 0px;  
+
+}
+#idPlay:hover {
+  border: 2px solid rgb(95, 118, 219);
+}
+

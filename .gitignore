@@ -1,0 +1,8 @@
+# Dependencias y builds (Fase 1+)
+node_modules/
+dist/
+coverage/
+
+# Sistema
+Thumbs.db
+.DS_Store

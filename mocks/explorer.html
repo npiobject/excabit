@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>excabit — workspace (mock)</title>
+  <link rel="stylesheet" href="assets/tokens.css">
+  <link rel="stylesheet" href="assets/mock.css">
+</head>
+<body>
+  <div class="mock-badge">MOCK · v2</div>
+
+  <div class="workspace">
+
+    <!-- ══════════ TOP BAR ══════════ -->
+    <header class="topbar">
+      <div class="brand"><span class="hl">ex</span>ca<span class="hl">bit</span></div>
+      <div class="search" data-tip="Buscar txid o dirección  ·  atajo: /">
+        <span>🔍</span>
+        <input id="topSearch" value="85e72c0814597ec52d2d178b7125af0e3cfa07821912ca81bf4b1fbe4b4b70f2" spellcheck="false">
+      </div>
+      <div class="spacer"></div>
+      <button class="chip" data-tip="Red activa (RF-04)"><span class="dot"></span> mainnet ▾</button>
+      <button class="chip" id="btnPalette" data-tip="Command palette">⌘K <kbd>Ctrl K</kbd></button>
+      <button class="chip" id="btnShortcuts" data-tip="Atajos de teclado"><kbd>?</kbd></button>
+      <button class="chip" data-tip="Idioma (RF-30)">ES ▾</button>
+    </header>
+
+    <!-- ══════════ TOOLBAR ══════════ -->
+    <nav class="toolbar">
+      <button class="tool active" data-tip="Seleccionar / mover  ·  V">⬚</button>
+      <button class="tool" data-tip="Selección por área  ·  A  (o shift+drag)">▧</button>
+      <div class="sep"></div>
+      <button class="tool" data-tip="Etiquetar selección  ·  T">🏷</button>
+      <button class="tool" data-tip="Color de selección  ·  C">🎨</button>
+      <button class="tool" id="btnDelete" data-tip="Eliminar selección  ·  Supr">🗑</button>
+      <div class="sep"></div>
+      <button class="tool" data-tip="Seguir fondos (taint)  ·  F">🧭</button>
+      <button class="tool" data-tip="Agrupar en cluster  ·  G">◉</button>
+      <div class="sep"></div>
+      <button class="tool" data-tip="Centrar / ajustar vista  ·  0" id="btnFit">⛶</button>
+      <button class="tool" data-tip="Cuadrícula" id="btnGrid">▦</button>
+      <button class="tool" id="btnExport" data-tip="Exportar PNG / SVG / CSV  ·  E">⇩</button>
+    </nav>
+
+    <!-- ══════════ CANVAS ══════════ -->
+    <section class="canvas-wrap" id="canvasWrap">
+      <svg id="graph" viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg" aria-label="Grafo de transacciones (mock)">
+        <g id="world">
+          <!-- aristas (se re-trazan con JS al arrastrar) -->
+          <g id="edges">
+            <path class="edge in"   data-from="ptx1"    data-to="addrIn1"/>
+            <path class="edge in"   data-from="ptx2"    data-to="addrIn2"/>
+            <path class="edge in"   data-from="addrIn1" data-to="root"/>
+            <path class="edge in"   data-from="addrIn2" data-to="root"/>
+            <path class="edge out"  data-from="root"    data-to="addrOut1"/>
+            <path class="edge out"  data-from="root"    data-to="addrOut2"/>
+            <path class="edge out"  data-from="addrOut1" data-to="ntx1"/>
+            <path class="edge utxo" data-from="addrOut2" data-to="utxo1"/>
+          </g>
+
+          <!-- Tx anteriores (colapsadas: afordancia +) -->
+          <g class="node tx" id="n-ptx1" data-id="ptx1" transform="translate(120,180)">
+            <rect class="box" x="-75" y="-34" width="150" height="68" rx="10"/>
+            <text x="-62" y="-12">12d3b2…f1ac</text>
+            <text class="sub" x="-62" y="6">tx anterior</text>
+            <text class="expand-hint" x="52" y="24">+</text>
+          </g>
+          <g class="node tx" id="n-ptx2" data-id="ptx2" transform="translate(120,505)">
+            <rect class="box" x="-75" y="-34" width="150" height="68" rx="10"/>
+            <text x="-62" y="-12">ae6617…d471</text>
+            <text class="sub" x="-62" y="6">tx anterior</text>
+            <text class="expand-hint" x="52" y="24">+</text>
+          </g>
+
+          <!-- direcciones de entrada (la misma dirección, reutilizada) -->
+          <g class="node addr side-in reused" id="n-addrIn1" data-id="addrIn1" transform="translate(330,180)">
+            <circle r="17"/>
+            <text x="-38" y="-27">122BNo…gNKt</text>
+            <text class="amount" x="-30" y="38">456.0 BTC</text>
+          </g>
+          <g class="node addr side-in reused" id="n-addrIn2" data-id="addrIn2" transform="translate(330,505)">
+            <circle r="17"/>
+            <text x="-38" y="-27">122BNo…gNKt</text>
+            <text class="amount" x="-32" y="38">77.9999 BTC</text>
+          </g>
+
+          <!-- Tx raíz -->
+          <g class="node tx root selected" id="n-root" data-id="root" transform="translate(565,340)">
+            <rect class="box" x="-105" y="-56" width="210" height="112" rx="12"/>
+            <text x="-90" y="-32">85e72c…4b70f2</text>
+            <text class="sub" x="-90" y="-13">bloque 300.000 · 10 may 2014</text>
+            <text class="amount" x="-90" y="8">533.9998 BTC</text>
+            <text class="sub" x="-90" y="27">fee 10 000 sats · 26,7 sat/vB</text>
+            <text class="sub" x="-90" y="45">2 in · 2 out · v1</text>
+            <g transform="translate(72,-38)">
+              <circle r="15" fill="#d29922" opacity="0.18"/>
+              <text class="score" x="-9" y="4" fill="#d29922">52</text>
+            </g>
+          </g>
+
+          <!-- direcciones de salida -->
+          <g class="node addr side-out" id="n-addrOut1" data-id="addrOut1" transform="translate(800,180)">
+            <circle r="17"/>
+            <text x="-38" y="-27">14o7zM…WF86</text>
+            <text class="amount" x="-30" y="38">500.0 BTC</text>
+          </g>
+          <g class="node addr side-out reused" id="n-addrOut2" data-id="addrOut2" transform="translate(800,505)">
+            <circle r="17"/>
+            <text x="-38" y="-27">122BNo…gNKt ⚠</text>
+            <text class="amount" x="-34" y="38">33.9998 BTC</text>
+          </g>
+
+          <!-- Tx siguiente (expandida por el usuario) -->
+          <g class="node tx" id="n-ntx1" data-id="ntx1" transform="translate(1035,180)">
+            <rect class="box" x="-75" y="-34" width="150" height="68" rx="10"/>
+            <text x="-62" y="-12">b7f04a…21c9</text>
+            <text class="sub" x="-62" y="6">gasta la salida</text>
+            <text class="expand-hint" x="52" y="24">+</text>
+          </g>
+
+          <!-- UTXO -->
+          <g class="node utxo" id="n-utxo1" data-id="utxo1" transform="translate(1035,505)">
+            <polygon points="0,-26 26,0 0,26 -26,0"/>
+            <text x="-22" y="-36">UTXO</text>
+            <text class="amount" x="-34" y="48">33.9998 BTC</text>
+          </g>
+        </g>
+      </svg>
+
+      <div class="zoom-controls">
+        <button id="zoomIn"  data-tip="Acercar  ·  rueda ↑">+</button>
+        <button id="zoomOut" data-tip="Alejar  ·  rueda ↓">−</button>
+        <button id="zoomFit" data-tip="Ajustar  ·  0">⛶</button>
+      </div>
+
+      <div class="minimap" id="minimap">
+        <button class="mini-head" id="miniToggle" data-tip="Minimizar / restaurar minimapa  ·  M">
+          <span class="mini-label">minimapa</span><span class="mini-chevron">▾</span>
+        </button>
+        <svg id="minimapSvg" viewBox="0 0 1200 700" width="100%" height="100%"></svg>
+      </div>
+
+      <button class="panel-toggle" id="btnPanel" data-tip="Ocultar panel  ·  ]" aria-label="Colapsar o expandir el panel lateral">⟩</button>
+    </section>
+
+    <!-- ══════════ PANEL LATERAL ══════════ -->
+    <aside class="panel" id="sidePanel">
+      <div class="panel-tabs">
+        <button class="active" data-tab="details">Detalles</button>
+        <button data-tab="heuristics">Heurísticas</button>
+        <button data-tab="investigation">Investigación</button>
+      </div>
+      <div class="panel-body">
+
+        <!-- DETALLES -->
+        <div class="tab-content active" id="tab-details">
+          <button class="copy-id" id="copyTxid" title="Copiar txid">
+            <span>85e72c0814597ec52d2d178b7125af0e3cfa07821912ca81bf4b1fbe4b4b70f2</span><span class="cp">⧉</span>
+          </button>
+          <dl>
+            <div class="detail-row"><dt>Estado</dt><dd style="color:var(--ok)">confirmada</dd></div>
+            <div class="detail-row"><dt>Bloque</dt><dd>300 000</dd></div>
+            <div class="detail-row"><dt>Fecha</dt><dd>10 may 2014 · 08:32</dd></div>
+            <div class="detail-row"><dt>Importe</dt><dd>533.9998 BTC</dd></div>
+            <div class="detail-row"><dt>Fee</dt><dd>10 000 sats</dd></div>
+            <div class="detail-row"><dt>Feerate</dt><dd>26,7 sat/vB</dd></div>
+            <div class="detail-row"><dt>Tamaño</dt><dd>374 B · 1 496 WU</dd></div>
+            <div class="detail-row"><dt>Entradas</dt><dd>2 (p2pkh)</dd></div>
+            <div class="detail-row"><dt>Salidas</dt><dd>2 (p2pkh)</dd></div>
+            <div class="detail-row"><dt>Versión · Locktime</dt><dd>1 · 0</dd></div>
+            <div class="detail-row"><dt>RBF</dt><dd>no (seq final)</dd></div>
+          </dl>
+          <a class="ext-link" href="https://mempool.space/tx/85e72c0814597ec52d2d178b7125af0e3cfa07821912ca81bf4b1fbe4b4b70f2" target="_blank" rel="noopener">ver en mempool.space ↗</a>
+        </div>
+
+        <!-- HEURÍSTICAS -->
+        <div class="tab-content" id="tab-heuristics">
+          <div class="score-block" style="--score: 52">
+            <div class="score-ring"><span>52</span></div>
+            <div class="score-txt"><b style="color:var(--warn)">Privacidad media-baja.</b> 3 heurísticas señalan la salida&nbsp;#2 como cambio: las dos direcciones quedan vinculadas.</div>
+          </div>
+
+          <details class="heur detected" open>
+            <summary><span class="light"></span><span class="h-name">Reutilización de direcciones</span><span class="conf">confianza alta</span></summary>
+            <div class="h-body">La dirección de entrada <b>122BNo…gNKt</b> aparece también como salida&nbsp;#2. Enviarse el cambio a la misma dirección vincula pasado y futuro de esos fondos con certeza casi total. <b>Cambio ⇒ salida&nbsp;#2 (33.9998 BTC).</b></div>
+          </details>
+
+          <details class="heur detected">
+            <summary><span class="light"></span><span class="h-name">Entrada innecesaria</span><span class="conf">confianza media</span></summary>
+            <div class="h-body">La salida menor (33.9998 BTC) es inferior a cualquiera de las dos entradas: si el pago fuera la salida menor, habría bastado una sola entrada. <b>Pago ⇒ salida&nbsp;#1 (500 BTC).</b></div>
+          </details>
+
+          <details class="heur detected">
+            <summary><span class="light"></span><span class="h-name">Pago con número redondo</span><span class="conf">confianza baja</span></summary>
+            <div class="h-body">La salida&nbsp;#1 es exactamente <b>500.0 BTC</b> (10 ceros en sats); la #2 no es redonda. Los humanos pagan cifras redondas; el cambio nunca lo es.</div>
+          </details>
+
+          <details class="heur na">
+            <summary><span class="light"></span><span class="h-name">Salida de monto mayor</span><span class="conf">no aplica</span></summary>
+            <div class="h-body">Requiere exactamente 1 entrada y 2 salidas; esta tx tiene 2 entradas.</div>
+          </details>
+          <details class="heur na">
+            <summary><span class="light"></span><span class="h-name">Pago a script distinto (bech32)</span><span class="conf">no aplica</span></summary>
+            <div class="h-body">Solo aplica a direcciones bc1q; esta tx es p2pkh (2014, anterior a SegWit).</div>
+          </details>
+          <details class="heur na">
+            <summary><span class="light"></span><span class="h-name">Pago usando Taproot</span><span class="conf">no aplica</span></summary>
+            <div class="h-body">No hay direcciones bc1p involucradas.</div>
+          </details>
+          <details class="heur na">
+            <summary><span class="light"></span><span class="h-name">Pago a formato diferente</span><span class="conf">no aplica</span></summary>
+            <div class="h-body">Todas las direcciones son del mismo tipo (p2pkh).</div>
+          </details>
+          <details class="heur na">
+            <summary><span class="light"></span><span class="h-name">Huella de cartera</span><span class="conf">informativa</span></summary>
+            <div class="h-body">v1 · locktime 0 · sin RBF: patrón de software antiguo (2014), compatible con Bitcoin Core de la época.</div>
+          </details>
+        </div>
+
+        <!-- INVESTIGACIÓN -->
+        <div class="tab-content" id="tab-investigation">
+          <div class="inv-item"><span class="swatch" style="background:var(--accent)"></span><span class="mono">85e72c…4b70f2</span><span class="lbl">tx de estudio</span></div>
+          <div class="inv-item"><span class="swatch" style="background:var(--warn)"></span><span class="mono">122BNo…gNKt</span><span class="lbl">"wallet origen"</span></div>
+          <div class="inv-item"><span class="swatch" style="background:var(--utxo-c)"></span><span class="mono">14o7zM…WF86</span><span class="lbl">"destino 500 BTC"</span></div>
+          <div class="inv-item"><span class="swatch" style="background:var(--surface-3)"></span><span class="mono">b7f04a…21c9</span><span class="lbl">sin etiqueta</span></div>
+          <div class="inv-note">
+            <label style="font-size:12px;color:var(--text-dim)">Notas de la investigación</label>
+            <textarea>Tx del bloque 300000. La entidad reutiliza 122BNo… para el cambio: seguir esa rama para mapear su wallet.</textarea>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ══════════ STATUS BAR ══════════ -->
+    <footer class="statusbar">
+      <span id="stNodes">9 nodos · 8 aristas</span>
+      <span data-tip="Proveedor de datos (ADR-002)"><span class="dot"></span>mempool.space</span>
+      <span>caché: 4 tx</span>
+      <span class="right">
+        <span id="stZoom">zoom 100%</span>
+        <span>mainnet</span>
+        <span>autosave ✓</span>
+      </span>
+    </footer>
+  </div>
+
+  <!-- tooltip flotante de nodos -->
+  <div class="node-tooltip" id="nodeTooltip"></div>
+
+  <!-- ══════════ COMMAND PALETTE (Ctrl+K) ══════════ -->
+  <div class="overlay" id="paletteOverlay">
+    <div class="palette">
+      <input id="paletteInput" placeholder="Escribe una acción… (RF-26: todas las acciones son buscables)" autocomplete="off">
+      <ul id="paletteList">
+        <li data-act="Expandir transacción seleccionada"><span class="ico">＋</span>Expandir transacción seleccionada<kbd>Enter</kbd></li>
+        <li data-act="Etiquetar selección"><span class="ico">🏷</span>Etiquetar selección<kbd>T</kbd></li>
+        <li data-act="Cambiar color"><span class="ico">🎨</span>Cambiar color de la selección<kbd>C</kbd></li>
+        <li data-act="Seguir fondos"><span class="ico">🧭</span>Seguir fondos desde la salida marcada<kbd>F</kbd></li>
+        <li data-act="Agrupar en cluster"><span class="ico">◉</span>Agrupar direcciones en cluster<kbd>G</kbd></li>
+        <li data-act="Eliminar selección"><span class="ico">🗑</span>Eliminar selección<kbd>Supr</kbd></li>
+        <li data-act="Deshacer"><span class="ico">↩</span>Deshacer<kbd>Ctrl Z</kbd></li>
+        <li data-act="Rehacer"><span class="ico">↪</span>Rehacer<kbd>Ctrl Y</kbd></li>
+        <li data-act="Ajustar vista"><span class="ico">⛶</span>Ajustar vista al grafo<kbd>0</kbd></li>
+        <li data-act="Guardar investigación"><span class="ico">💾</span>Guardar investigación (.excabit.json)<kbd>Ctrl S</kbd></li>
+        <li data-act="Exportar PNG"><span class="ico">🖼</span>Exportar imagen PNG<kbd>E</kbd></li>
+        <li data-act="Exportar CSV"><span class="ico">📊</span>Exportar nodos/aristas a CSV</li>
+        <li data-act="Cambiar red"><span class="ico">🌐</span>Cambiar de red (mainnet/testnet/signet)</li>
+        <li data-act="Cambiar idioma"><span class="ico">🗣</span>Cambiar idioma (ES/EN)</li>
+        <li data-act="Mostrar/ocultar panel lateral"><span class="ico">◨</span>Mostrar/ocultar panel lateral<kbd>]</kbd></li>
+        <li data-act="Minimizar/restaurar minimapa"><span class="ico">◱</span>Minimizar/restaurar minimapa<kbd>M</kbd></li>
+        <li data-act="Atajos de teclado"><span class="ico">⌨</span>Ver atajos de teclado<kbd>?</kbd></li>
+      </ul>
+      <div class="empty" id="paletteEmpty">Sin resultados…</div>
+    </div>
+  </div>
+
+  <!-- ══════════ OVERLAY DE ATAJOS (?) ══════════ -->
+  <div class="overlay" id="shortcutsOverlay">
+    <div class="shortcuts-card">
+      <h2>Atajos de teclado <small>Esc para cerrar · RF-27</small></h2>
+      <div class="sc-grid">
+        <div class="sc-row"><span>Buscar</span><kbd>/</kbd></div>
+        <div class="sc-row"><span>Command palette</span><kbd>Ctrl K</kbd></div>
+        <div class="sc-row"><span>Expandir tx seleccionada</span><kbd>Enter</kbd> </div>
+        <div class="sc-row"><span>Selección por área</span><kbd>A</kbd></div>
+        <div class="sc-row"><span>Etiquetar</span><kbd>T</kbd></div>
+        <div class="sc-row"><span>Colorear</span><kbd>C</kbd></div>
+        <div class="sc-row"><span>Seguir fondos</span><kbd>F</kbd></div>
+        <div class="sc-row"><span>Agrupar cluster</span><kbd>G</kbd></div>
+        <div class="sc-row"><span>Eliminar selección</span><kbd>Supr</kbd></div>
+        <div class="sc-row"><span>Deshacer / Rehacer</span><kbd>Ctrl Z / Y</kbd></div>
+        <div class="sc-row"><span>Ajustar vista</span><kbd>0</kbd></div>
+        <div class="sc-row"><span>Guardar / Abrir</span><kbd>Ctrl S / O</kbd></div>
+        <div class="sc-row"><span>Exportar</span><kbd>E</kbd></div>
+        <div class="sc-row"><span>Deseleccionar</span><kbd>Esc</kbd></div>
+        <div class="sc-row"><span>Mostrar/ocultar panel</span><kbd>]</kbd></div>
+        <div class="sc-row"><span>Minimizar minimapa</span><kbd>M</kbd></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-zone" id="toastZone"></div>
+
+  <script src="assets/mock.js"></script>
+</body>
+</html>
