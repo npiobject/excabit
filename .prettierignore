@@ -1,0 +1,10 @@
+dist/
+coverage/
+node_modules/
+package-lock.json
+
+# Entregables cerrados en la Fase 0: se versionan tal cual se aprobaron.
+old/
+docs/
+mocks/
+tests/fixtures/
