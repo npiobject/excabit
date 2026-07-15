@@ -30,6 +30,8 @@ export interface TxSpec {
   version?: number;
   locktime?: number;
   fee?: bigint;
+  /** Atajo: un nombre corto se rellena a un txid válido de 64 hex. */
+  txid?: string;
 }
 
 const DEFAULT_VALUE = 100_000n;
@@ -70,6 +72,8 @@ export function txWith(spec: TxSpec = {}): NormalizedTx {
   if (spec.version !== undefined) base.version = spec.version;
   if (spec.locktime !== undefined) base.locktime = spec.locktime;
   if (spec.fee !== undefined) base.fee = spec.fee;
+  // 'tx1' → '00…0tx1': legible en el test y válido como txid de 64 hex.
+  if (spec.txid !== undefined) base.txid = spec.txid.padStart(64, '0');
 
   return txFixture(base);
 }

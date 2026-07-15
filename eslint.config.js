@@ -24,6 +24,18 @@ export default tseslint.config(
         tsconfigRootDir: import.meta.dirname,
       },
     },
+    rules: {
+      // `_` marca lo intencionadamente sin usar. Sobre todo para quitar una
+      // propiedad con rest: `({ label: _drop, ...node }) => node`.
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+        },
+      ],
+    },
   },
 
   // --- Fronteras entre capas ---
