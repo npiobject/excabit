@@ -130,6 +130,25 @@ describe('RF-02 clasificador de direcciones', () => {
   it('rechaza bech32 con carácter fuera del alfabeto (b, i, o, 1)', () => {
     expect(classifyAddress('bc1qb508d6qejxtdg4y5r3zarvary0c5xw7kv8f3tb')).toBe('unknown');
   });
+
+  it('una base58 válida que no empieza por 1 ni 3 no es de mainnet → unknown', () => {
+    // 2N… es p2sh de testnet: alfabeto y longitud válidos, red equivocada.
+    expect(classifyAddress('2N7MGY19ti4KDMSzRfPdssKvDiqYqWCEeKN')).toBe('unknown');
+  });
+
+  it('bech32 v0 con longitud no estándar → unknown', () => {
+    // Ni 42 (p2wpkh) ni 62 (p2wsh): no existe tal witness v0.
+    expect(classifyAddress('bc1qw508d6qejxtdg4y5r3zarvary0c5xw7k')).toBe('unknown');
+  });
+
+  it('versión de witness desconocida (bc1z…) → unknown', () => {
+    // 'z' no es ni q (v0) ni p (v1): una versión futura que aún no sabemos leer.
+    expect(classifyAddress('bc1zw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4')).toBe('unknown');
+  });
+
+  it('el separador bech32 sin hrp bc (tb1…, testnet) → unknown', () => {
+    expect(classifyAddress('tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx')).toBe('unknown');
+  });
 });
 
 describe('RF-02 detección del tipo de búsqueda', () => {

@@ -118,6 +118,46 @@ describe('normalizeTx contra fixtures reales', () => {
     expect(tx.vout.some((o) => o.scriptType === 'p2wsh')).toBe(false);
   });
 
+  it('vin sin prevout (no coinbase) → value 0n y sin dirección, sin crash', () => {
+    // Algunas instancias Esplora omiten prevout si no lo tienen indexado.
+    const raw = structuredClone(canonical) as unknown as EsploraTx;
+    raw.vin[0]!.prevout = null;
+
+    const tx = normalizeTx(raw);
+
+    expect(tx.vin[0]?.value).toBe(0n);
+    expect(tx.vin[0]?.address).toBeUndefined();
+    expect(tx.vin[0]?.isCoinbase).toBe(false);
+    expect(tx.vin[0]?.txid).not.toBeNull();
+  });
+
+  it('vin cuyo prevout no tiene dirección → address undefined', () => {
+    const raw = structuredClone(canonical) as unknown as EsploraTx;
+    delete raw.vin[0]!.prevout!.scriptpubkey_address;
+
+    const tx = normalizeTx(raw);
+
+    expect(tx.vin[0]?.address).toBeUndefined();
+    expect(tx.vin[0]?.value).toBeGreaterThan(0n);
+  });
+
+  it('confirmada pero sin altura en la respuesta → blockHeight null (no se inventa)', () => {
+    const raw = structuredClone(canonical) as unknown as EsploraTx;
+    raw.status = { confirmed: true };
+
+    const tx = normalizeTx(raw);
+
+    expect(tx.blockHeight).toBeNull();
+    expect(tx.blockTime).toBeNull();
+  });
+
+  it('un scriptType que no conocemos → unknown en vez de reventar', () => {
+    const raw = structuredClone(canonical) as unknown as EsploraTx;
+    raw.vout[0]!.scriptpubkey_type = 'v2_p2xx_del_futuro';
+
+    expect(normalizeTx(raw).vout[0]?.scriptType).toBe('unknown');
+  });
+
   it('es puro: no muta la respuesta del provider', () => {
     const raw = structuredClone(canonical);
     const before = JSON.stringify(raw);

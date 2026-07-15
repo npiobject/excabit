@@ -45,3 +45,6 @@ jobs:
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Las claves caducadas del legacy en old/ están en allowlist; una
+          # clave nueva en src/ sigue rompiendo el build. Ver .gitleaks.toml.
+          GITLEAKS_CONFIG: ${{ github.workspace }}/.gitleaks.toml

@@ -1,0 +1,31 @@
+# Configuración de gitleaks (CI, docs/08 Fase 1).
+#
+# Motivo de existir: BUG-001. El legacy incrustó dos claves de NowNodes en el
+# cliente y las publicó. La v2 no usa claves (ADR-002) y gitleaks está en CI
+# para que eso no vuelva a pasar.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "nownodes-api-key"
+description = "Clave de API estilo NowNodes (UUID) incrustada en cliente"
+regex = '''(?i)(api[_-]?key|apikey)['"\s:=]{1,10}[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}'''
+
+[allowlist]
+description = """
+old/ es el legacy de 2022 archivado como referencia histórica (docs/00 §Estado
+actual). Contiene las claves de NowNodes del BUG-001, ya presentes en el
+historial del repo desde antes de la v2.
+
+No se tratan como hallazgo activo porque:
+  1. La clave activa está caducada — verificado el 2026-07-05: devuelve
+     `401 Unknown API_key` (docs/02 BUG-001). Riesgo residual nulo.
+  2. Reescribir el historial para purgarlas no aportaría nada: son públicas
+     desde 2022 y ya no sirven para autenticar.
+  3. El código de la v2 no usa claves en absoluto (ADR-002).
+
+Lo que SÍ debe fallar el CI es una clave nueva en src/: por eso la allowlist se
+limita a la ruta del legacy en vez de silenciar la regla entera.
+"""
+paths = ['''^old/''']

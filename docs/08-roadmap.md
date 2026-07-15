@@ -25,6 +25,33 @@ Cada fase entrega algo usable/verificable y cierra con criterios de salida expl�
 - Fixtures reales congeladas (txids del doc 04) + MSW.
 - **Salida**: `getTx`/`getAddress` devuelven `NormalizedTx` para los fixtures; cobertura `core/`+`data/` ≥ 90 %; regresiones BUG-002/003/004 en verde; cero secretos (gitleaks).
 
+### Resultado (cerrada el 2026-07-15)
+
+| Criterio de salida | Resultado |
+|---|---|
+| `getTx`/`getAddress` → `NormalizedTx` | ✅ verificado contra los 8 fixtures reales |
+| Cobertura `core/`+`data/` ≥ 90 % | ✅ 98,1 % sentencias · 94,6 % ramas · 100 % líneas |
+| Regresiones BUG-002/003/004 | ✅ en verde; BUG-002 comprobado por mutación (se reintrodujo el bug y la suite lo cazó) |
+| Cero secretos | ✅ gitleaks 8.28 en verde; regla propia verificada con una clave de prueba en `src/` |
+
+120 tests en 7 suites (el plan estimaba ~45 casos: la diferencia son ramas y
+casos límite que aparecieron al escribirlos). Entregado también, no previsto:
+
+- **Regla arquitectónica ejecutable**: `boundaries/dependencies` impide que
+  `core/`/`data/`/`analysis/`/`persistence/` importen Cytoscape (ADR-001) o DOM.
+  Requiere `eslint-import-resolver-typescript`: sin él la regla pasa en vacío
+  porque no resuelve los imports y clasifica el destino como desconocido.
+- **`.gitleaks.toml`**: la config por defecto NO detecta claves tipo UUID como
+  las de NowNodes (BUG-001). Se añadió una regla propia que sí lo hace, con
+  `old/` en allowlist (claves caducadas, archivo histórico).
+- Fixtures de coinbase, taproot, CoinJoin Whirlpool 5×5 y OP_RETURN, con su
+  índice en `tests/fixtures/README.md`.
+
+**Ajuste al plan**: el doc 04 daba por hecho que la CoinJoin se elegiría "a ojo";
+localizarla exigió escanear el bloque 724743 entero (11 candidatas en 1076 txs).
+Las txs con 3+ salidas de importe idéntico son raras (11 de 300 en el muestreo),
+lo que de paso confirma que H-09 tendrá poco ruido.
+
 ## Fase 2 — Heurísticas (est. 1-2 semanas, TDD puro)
 
 - `address-type.ts` + H-01..H-09 + `score.ts`, cada una precedida por sus vectores del doc 04.
