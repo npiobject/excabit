@@ -23,6 +23,14 @@ export interface Vin {
   vout: number | null;
   value: bigint;
   address?: AddressId;
+  /**
+   * Tipo del output que esta entrada gasta, según el proveedor.
+   *
+   * Lo necesitan H-03/H-04/H-05 ("todas las entradas del mismo tipo"). Viene
+   * del provider en vez de deducirse de la dirección porque deducirlo daría
+   * `unknown` en testnet/signet y dejaría las heurísticas ciegas ahí (RF-04).
+   */
+  scriptType: AddressType;
   sequence: number;
   isCoinbase: boolean;
 }

@@ -57,6 +57,45 @@ lo que de paso confirma que H-09 tendrá poco ruido.
 - `address-type.ts` + H-01..H-09 + `score.ts`, cada una precedida por sus vectores del doc 04.
 - **Salida**: todos los vectores en verde; regresiones BUG-006/007/008 en verde; cobertura `analysis/` ≥ 95 %; demo CLI/test que imprime las heurísticas de un txid real.
 
+### Resultado (cerrada el 2026-07-15)
+
+| Criterio de salida | Resultado |
+|---|---|
+| Vectores del doc 04 | ✅ los 9 (H-01..H-09) con sus V1..Vn |
+| Regresiones BUG-006/007/008 | ✅ en verde, más BUG-009/010/011 |
+| Cobertura `analysis/` ≥ 95 % | ✅ 97,9 % ramas · 100 % líneas · umbral por glob verificado (falla al 99 %) |
+| Demo con un txid real | ✅ `npm run analyze -- <txid> [red]`, contra mempool.space |
+
+244 tests en 18 suites. Decisiones tomadas al implementar:
+
+- **`analysis/address-type.ts` no tiene su propio clasificador**: reexporta el de
+  `core/validators`. Tener dos clasificadores ES el BUG-006; la defensa no es
+  clasificar mejor, es no duplicar.
+- **`Vin.scriptType`** (campo nuevo): H-03/H-04/H-05 necesitan el tipo de las
+  entradas. Sale del proveedor (`prevout.scriptpubkey_type`), no de deducirlo de
+  la dirección, porque deducirlo daría `unknown` en testnet y dejaría las
+  heurísticas ciegas fuera de mainnet (RF-04).
+- **Confianza `info`** (valor nuevo): H-08 solo informa. El doc la describe como
+  «confianza n/a»; decirlo explícitamente es mejor que darle una confianza baja
+  que el score tendría que aprender a ignorar. `info` penaliza 0.
+- **H-09 exige ≥ 2 direcciones distintas** de entrada: agrupar una dirección
+  consigo misma no revela nada. Y `looksLikeCoinJoin` exige ≥ 2 entradas además
+  de salidas repetidas, para no confundir un pago por lotes (1 entrada → 30
+  salidas iguales) con una mezcla y apagar CIOH donde sí es válida.
+
+**Corrección al plan**: `docs/09` predecía score 52 para `85e72c…`; el valor real
+aplicando el doc 04 es **60** (`address-reuse` −25 + `unnecessary-input` −15).
+El 52 asumía una heurística *low* que no aplica: H-01 exige 1 entrada (hay 2) y
+H-06 se descarta porque ambas salidas son redondas — su propio vector V4.
+Corregido en `docs/09` y confirmado por el test contra el fixture real.
+
+**Observación para la Fase 4 (UI)**: en `85e72c…` dos heurísticas se contradicen
+—H-07 (high) dice que `vout[1]` es el cambio; H-02 (medium) lo señala como el
+pago— y H-07 acierta. Es el comportamiento esperado y justo el argumento de la
+propuesta de valor nº 3: mostrar cada heurística con su confianza en vez de un
+veredicto único de caja negra. La UI debe ordenar por confianza, no fingir
+consenso.
+
 ## Fase 3 — Grafo interactivo (est. 3-4 semanas)
 
 - Spike inicial: layout radial `preset` en Cytoscape (válvula de la ADR-001).

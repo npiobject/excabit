@@ -118,6 +118,25 @@ describe('normalizeTx contra fixtures reales', () => {
     expect(tx.vout.some((o) => o.scriptType === 'p2wsh')).toBe(false);
   });
 
+  it('vin lleva el scriptType del output que gasta (lo necesitan H-03/H-04/H-05)', () => {
+    const tx = normalizeTx(asTx(canonical));
+
+    expect(tx.vin.map((i) => i.scriptType)).toEqual(['p2pkh', 'p2pkh']);
+  });
+
+  it('el scriptType del vin sale del provider, no de adivinar por la dirección', () => {
+    // Derivarlo de la cadena de la dirección devolvería 'unknown' en testnet y
+    // dejaría las heurísticas ciegas fuera de mainnet (RF-04).
+    const raw = structuredClone(canonical) as unknown as EsploraTx;
+    raw.vin[0]!.prevout!.scriptpubkey_type = 'v1_p2tr';
+
+    expect(normalizeTx(raw).vin[0]?.scriptType).toBe('p2tr');
+  });
+
+  it('vin de coinbase → scriptType unknown (no gasta ningún output)', () => {
+    expect(normalizeTx(asTx(coinbase)).vin[0]?.scriptType).toBe('unknown');
+  });
+
   it('vin sin prevout (no coinbase) → value 0n y sin dirección, sin crash', () => {
     // Algunas instancias Esplora omiten prevout si no lo tienen indexado.
     const raw = structuredClone(canonical) as unknown as EsploraTx;

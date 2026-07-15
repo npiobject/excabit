@@ -16,12 +16,21 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
       include: ['src/core/**', 'src/data/**', 'src/analysis/**'],
-      // Gate de Fase 1 (docs/08-roadmap.md): core/ + data/ >= 90 %.
+      // Gates del roadmap (docs/07 §1): core/+data/ ≥ 90 %, analysis/ ≥ 95 %.
+      // analysis/ va más alto porque ahí vivían los bugs silenciosos del
+      // legacy: las heurísticas dieron resultados incorrectos durante años
+      // (BUG-006..009) sin que nadie lo notara.
       thresholds: {
         lines: 90,
         functions: 90,
         branches: 90,
         statements: 90,
+        'src/analysis/**': {
+          lines: 95,
+          functions: 95,
+          branches: 95,
+          statements: 95,
+        },
       },
     },
   },

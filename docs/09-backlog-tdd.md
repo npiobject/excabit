@@ -66,7 +66,9 @@ Orden de escritura (cada punto es una sesión TDD):
 - Además, en todas: `it('es pura: no muta la tx de entrada')` y `it('sin direcciones → insufficient-data')`.
 
 ### 18. `tests/unit/analysis/score.spec.ts`
-- 0 detectadas → 100 · high=25/medium=15/low=8 · nunca < 0 · umbrales de badge (≥80 verde, 40-79 ámbar, <40 rojo) · la tx real 85e72c… → 52
+- 0 detectadas → 100 · high=25/medium=15/low=8 · nunca < 0 · umbrales de badge (≥80 verde, 40-79 ámbar, <40 rojo) · la tx real 85e72c… → **60** (ámbar)
+
+> **Corregido en Fase 2 (2026-07-15).** Este documento predecía 52 para `85e72c…`; el valor real aplicando el doc 04 es **60**. La tx solo dispara `address-reuse` (high, −25) y `unnecessary-input` (medium, −15). El 52 asumía además una heurística *low*, y ninguna aplica: H-01 exige exactamente 1 entrada (la tx tiene 2) y H-06 se descarta porque **ambas** salidas son redondas (50.000.000.000 y 3.399.980.000 sats), que es literalmente su vector V4. Verificado contra el fixture real, no estimado.
 
 **Gate**: vectores completos; regresiones BUG-006/007/008 en verde; `analysis/` ≥ 95 %.
 

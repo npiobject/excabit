@@ -53,15 +53,24 @@ function normalizeVin(raw: EsploraTx['vin'][number]): Vin {
   // 0xffffffff). Modelarlos como null evita que el grafo intente expandir una
   // tx previa que no existe (el legacy lo intentaba: BUG-016).
   if (raw.is_coinbase) {
-    return { txid: null, vout: null, value: 0n, sequence: raw.sequence, isCoinbase: true };
+    return {
+      txid: null,
+      vout: null,
+      value: 0n,
+      scriptType: 'unknown',
+      sequence: raw.sequence,
+      isCoinbase: true,
+    };
   }
 
   const address = raw.prevout?.scriptpubkey_address;
+  const scriptType = raw.prevout?.scriptpubkey_type;
 
   return {
     txid: raw.txid,
     vout: raw.vout,
     value: BigInt(raw.prevout?.value ?? 0),
+    scriptType: scriptType === undefined ? 'unknown' : toAddressType(scriptType),
     sequence: raw.sequence,
     isCoinbase: false,
     ...(address === undefined ? {} : { address }),
