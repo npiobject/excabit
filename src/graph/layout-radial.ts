@@ -51,10 +51,13 @@ export function layoutRadial(graph: Graph, rootId: string, options: LayoutOption
   const radius = options.radius ?? DEFAULT_RADIUS;
   const nodes: Record<string, GraphNode> = { ...graph.nodes };
 
-  // Si el usuario ya movió la raíz, el sistema orbita alrededor de donde la
-  // dejó; si no, se centra donde diga el llamante.
-  const center = root.pinned === true ? { x: root.x, y: root.y } : options.center;
-  if (root.pinned !== true) nodes[rootId] = { ...root, x: center.x, y: center.y };
+  // Un nodo se queda donde está si el usuario lo movió (pinned) o si el layout
+  // ya lo colocó (placed): expandir no puede reorganizar lo que ya se veía.
+  const isFixed = (node: GraphNode): boolean => node.pinned === true || node.placed === true;
+
+  // Si la raíz ya tiene sitio, el sistema orbita alrededor de donde está.
+  const center = isFixed(root) ? { x: root.x, y: root.y } : options.center;
+  if (!isFixed(root)) nodes[rootId] = { ...root, x: center.x, y: center.y, placed: true };
 
   const inputs = Object.values(graph.edges)
     .filter((edge) => edge.kind === 'input' && edge.to === rootId)
@@ -69,13 +72,15 @@ export function layoutRadial(graph: Graph, rootId: string, options: LayoutOption
     ids.forEach((id, i) => {
       const node = nodes[id];
       // `pinned` gana siempre: es una decisión del usuario, no del layout.
-      if (node === undefined || node.pinned === true) return;
+      // `placed` también: ya tiene un sitio y moverlo desorientaría.
+      if (node === undefined || isFixed(node)) return;
 
       const radians = toRadians(angles[i] ?? 0);
       nodes[id] = {
         ...node,
         x: center.x + side * radius * Math.cos(radians),
         y: center.y + radius * Math.sin(radians),
+        placed: true,
       };
     });
   };

@@ -102,6 +102,41 @@ consenso.
 - `graph-model`, `cy-adapter`, interacciones (expandir, drag, zoom, selección, área), comandos + undo/redo, minimapa.
 - **Salida**: paridad con el legacy según la checklist F-05..F-17 de [01-analisis-legacy.md](01-analisis-legacy.md) §4; RNF-01 (60 fps/300 nodos); regresiones BUG-013/015/016 en verde; E2E "buscar→expandir→mover→undo" en CI.
 
+### Resultado (cerrada el 2026-07-15)
+
+**SPIKE ADR-001: confirmada, no se reabre.** Verificado contra Cytoscape real
+(`tests/unit/graph/spike-cytoscape.spec.ts`): `preset` respeta posiciones
+exactas, añadir nodos no recoloca los existentes, y zoom/pan son transformación
+de vista — 20 zooms no mueven un píxel del modelo. Además drag grupal,
+selección acumulable, borrado de aristas huérfanas y compound nodes.
+
+| Criterio de salida | Resultado |
+|---|---|
+| Paridad F-05..F-17 | ✅ grafo, expansión, drag, zoom/pan, selección, borrado, undo/redo |
+| Regresiones BUG-013/015/016 | ✅ en verde, más BUG-017 y BUG-020 |
+| E2E "buscar→expandir→mover→undo" | ✅ 20 E2E en CI contra el build real, red mockeada |
+| RNF-01 (60 fps / 300 nodos) | ⚠️ **~46 fps** (21,6 ms/frame). Ver abajo. |
+
+337 tests unit + 20 E2E. Cobertura global 98,6 % sentencias · 95,2 % ramas.
+
+**RNF-01 no se cumple del todo y no se disimula**: la medición real con 300
+nodos y 300 aristas da **21,6 ms/frame ≈ 46 fps**, no los 60 exigidos. El pan es
+fluido y el umbral del test (64 ms) protege contra regresiones de orden de
+magnitud, pero el objetivo estricto queda pendiente: medir en un navegador con
+GPU real (la cifra es de chromium headless) y, si se confirma, optimizar en la
+Fase 4 con `hideEdgesOnViewport`/`textureOnViewport` o aligerando el estilado.
+
+**Bug encontrado mirando la app, no los tests**: las txs vecinas aterrizaban
+todas sobre la raíz (un `center: {0,0}` fijo en el wiring). Los 17 E2E pasaban
+porque contaban nodos, y había 8 — pero el usuario veía 5. Se añadió
+`GraphNode.placed` (colocado por el layout ≠ `pinned`, movido por el usuario),
+cada vecina recibe su centro, y ahora hay un E2E que falla si dos nodos comparten
+posición. Lección: contar entidades no prueba que se vean.
+
+**Pendiente que pasa a la Fase 4**: el minimapa (RF-13) — es una pieza de shell y
+encaja mejor con el resto de la UI. El shell de la Fase 3 es mínimo a propósito
+(búsqueda + grafo + atajos), lo justo para poder probar el grafo de punta a punta.
+
 ## Fase 4 — Shell UI (est. 2-3 semanas)
 
 - Top bar, toolbar, panel lateral (Detalles/Heurísticas/Investigación), command palette, overlay de atajos, toasts, tema (tokens del mock), i18n ES/EN, tour.

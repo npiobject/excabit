@@ -1,0 +1,113 @@
+/*
+ * Tokens del mock aprobado en la Fase 0 (mocks/assets/tokens.css, docs/06).
+ * Se copian tal cual: el mock es la referencia visual y sus tokens quedaron
+ * como definitivos.
+ *
+ * Shell mínimo de la Fase 3; la Fase 4 monta la UI completa sobre estos mismos
+ * tokens.
+ */
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface-2: #1f2630;
+  --border: #2d333b;
+
+  --text: #e6edf3;
+  --text-dim: #8b949e;
+
+  --accent: #f7931a;
+  --bad: #f85149;
+
+  --font-ui: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+
+  --radius: 8px;
+  --radius-sm: 5px;
+  --topbar-h: 52px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+}
+
+#topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--topbar-h);
+  padding: 0 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+#search {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+#search:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button {
+  height: 32px;
+  padding: 0 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--accent);
+}
+
+#searchBtn {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1a1205;
+  font-weight: 600;
+}
+
+#status {
+  min-width: 70px;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+#error {
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--bad) 12%, transparent);
+  border-bottom: 1px solid var(--bad);
+  color: var(--bad);
+  font-size: 13px;
+}
+
+#error[hidden] {
+  display: none;
+}
+
+#graph {
+  width: 100%;
+  height: calc(100vh - var(--topbar-h));
+  background: var(--bg);
+}

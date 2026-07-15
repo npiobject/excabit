@@ -6,3 +6,9 @@ coverage/
 # Sistema
 Thumbs.db
 .DS_Store
+
+# Artefactos de test
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

@@ -31,6 +31,15 @@ export interface GraphNode {
   address?: AddressId;
   /** `true` si el usuario la ha movido: el layout ya no la recoloca (RF-06). */
   pinned?: boolean;
+  /**
+   * `true` si el layout ya le dio una posición.
+   *
+   * Distinto de `pinned`: aquí no ha intervenido el usuario. Sirve para que al
+   * expandir no se recoloque lo que ya estaba colocado — sin esto, cargar una
+   * tx vecina arrastraría las direcciones que comparte con la raíz y el grafo
+   * daría un salto en cada expansión.
+   */
+  placed?: boolean;
 }
 
 export interface GraphEdge {

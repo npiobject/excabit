@@ -32,8 +32,32 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Tests + cobertura (gate Fase 1 ≥ 90 %)
+      - name: Tests + cobertura (core/+data/ ≥ 90 %, analysis/ ≥ 95 %)
         run: npm run test:coverage
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      # Contra el build real, con la red mockeada: los E2E no tocan
+      # mempool.space (ADR-002).
+      - name: E2E (explore, zoom, selection, rendimiento)
+        run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
 
   secrets:
     # BUG-001: el legacy publicó claves NowNodes en el cliente. Que no se repita.

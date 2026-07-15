@@ -6,7 +6,24 @@
     <title>excabit — explorador gráfico de la cadena de Bitcoin</title>
   </head>
   <body>
-    <div id="app"></div>
+    <header id="topbar">
+      <label for="search" class="sr-only" hidden>Txid a explorar</label>
+      <input
+        id="search"
+        type="text"
+        placeholder="Pega un txid (64 caracteres hex) y pulsa Enter"
+        spellcheck="false"
+        autocomplete="off"
+      />
+      <button id="searchBtn" type="button">Buscar</button>
+      <button id="exampleBtn" type="button">Ejemplo</button>
+      <span id="status" role="status" aria-live="polite"></span>
+    </header>
+
+    <p id="error" role="alert" hidden></p>
+
+    <main id="graph" aria-label="Grafo de la transacción"></main>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
