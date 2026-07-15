@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { mockApi, ROOT_TXID } from './helpers/mock-api';
+import { skipTour, useLocale } from './helpers/setup';
 
 /**
  * RNF-01: 60 fps de pan con 300 nodos.
@@ -27,6 +28,8 @@ const NODE_TARGET = 300;
 
 test('RNF-01: pan fluido con 300 nodos', async ({ page }) => {
   await mockApi(page);
+  await skipTour(page);
+  await useLocale(page, 'es');
   await page.goto('/');
   await page.fill('#search', ROOT_TXID);
   await page.click('#searchBtn');

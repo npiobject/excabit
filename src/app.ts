@@ -21,21 +21,50 @@ import {
   addTxData,
   moveNode,
   setSelection,
+  setLabel,
+  setColor,
   deleteSelection,
   type InvestigationState,
+  type UndoableCommand,
 } from './core/commands';
 import { txNodeId, type Graph } from './core/graph-model';
 import { normalizeTxid } from './core/validators';
 import { CyAdapter } from './graph/cy-adapter';
 import { layoutRadial } from './graph/layout-radial';
 import type { NormalizedTx, Txid } from './core/types';
+import { t, type MessageKey } from './i18n/i18n';
+import { analyzeTx } from './analysis/score';
 
 export interface AppOptions {
   container: HTMLElement;
   client: ApiClient;
-  /** Se llama con los mensajes de error (RF-29). La Fase 4 los hará toasts. */
+  /**
+   * Error de red o del proveedor → toast con reintento (RF-29).
+   */
   onError?: (message: string) => void;
+  /**
+   * Entrada del usuario mal formada → mensaje **inline** junto a la búsqueda
+   * (RF-01). No es un toast: el error está en lo que acaba de escribir y se
+   * corrige ahí mismo, no en una esquina de la pantalla.
+   */
+  onInvalidInput?: (message: string) => void;
   onStatus?: (status: 'idle' | 'loading') => void;
+}
+
+/** Traduce el error tipado al mensaje que lee la persona (RF-29). */
+function messageKeyFor(error: unknown): MessageKey {
+  if (!isApiError(error)) return 'error.unexpected';
+
+  switch (error.kind) {
+    case 'not-found':
+      return 'error.notFound';
+    case 'rate-limited':
+      return 'error.rateLimited';
+    case 'network':
+      return 'error.network';
+    default:
+      return 'error.unexpected';
+  }
 }
 
 /** Cuántas txs vecinas se traen al expandir. Acotado para no abusar de la API. */
@@ -50,14 +79,16 @@ export class App {
   readonly history = new History();
   /** Público: lo necesitan el minimapa (RF-13) y los E2E de viewport. */
   readonly adapter: CyAdapter;
-  private readonly client: ApiClient;
+  private client: ApiClient;
   private readonly onError: (message: string) => void;
+  private readonly onInvalidInput: (message: string) => void;
   private readonly onStatus: (status: 'idle' | 'loading') => void;
   private rootTxid: Txid | undefined;
 
   constructor(options: AppOptions) {
     this.client = options.client;
     this.onError = options.onError ?? (() => undefined);
+    this.onInvalidInput = options.onInvalidInput ?? (() => undefined);
     this.onStatus = options.onStatus ?? (() => undefined);
 
     this.store = new Store(initialInvestigation(), {
@@ -65,7 +96,15 @@ export class App {
       // congelarlo entero en cada dispatch se paga en cada frame (RNF-01).
       freeze: false,
     });
-    this.adapter = new CyAdapter({ container: options.container });
+    // El score se inyecta: `graph/` no conoce `analysis/` (docs/05 §2).
+    this.adapter = new CyAdapter({
+      container: options.container,
+      scoreOf: (tx) => {
+        const analysis = analyzeTx(tx);
+
+        return { score: analysis.score, badge: analysis.badge };
+      },
+    });
 
     this.store.subscribe((event) => {
       this.adapter.sync(event.state.graph);
@@ -86,20 +125,22 @@ export class App {
     });
   }
 
-  private dispatch(
-    command: ReturnType<typeof moveNode>,
-    options: { coalesceKey?: string } = {},
-  ): void {
+  private dispatch(command: UndoableCommand, options: { coalesceKey?: string } = {}): void {
     const next = this.history.execute(command, this.store.getState(), options);
     this.store.dispatch({ type: command.type, apply: () => next });
+  }
+
+  /** Cambia de proveedor sin perder la investigación (RF-04). */
+  setClient(client: ApiClient): void {
+    this.client = client;
   }
 
   /** Carga la tx y la coloca en el centro del radial (RF-01, RF-05). */
   async search(input: string): Promise<void> {
     const txid = normalizeTxid(input);
     if (txid === null) {
-      // Error inline, nunca un popup (RF-01, BUG-003).
-      this.onError('Introduce un txid válido de 64 caracteres hexadecimales.');
+      // Inline junto al input, nunca un popup (RF-01, BUG-003).
+      this.onInvalidInput(t('search.invalid'));
       return;
     }
 
@@ -138,8 +179,9 @@ export class App {
 
       return withSpends;
     } catch (error) {
-      // Los errores son datos tipados que suben a la UI (BUG-003).
-      this.onError(isApiError(error) ? error.message : 'Error inesperado al cargar la tx.');
+      // Los errores son datos tipados que suben a la UI (BUG-003). Cada tipo
+      // tiene su mensaje: «no existe» y «no hay red» piden cosas distintas.
+      this.onError(t(messageKeyFor(error)));
       return null;
     } finally {
       this.onStatus('idle');
@@ -206,6 +248,22 @@ export class App {
     if (selection.length === 0) return;
 
     this.dispatch(deleteSelection(selection));
+  }
+
+  /** Etiqueta un nodo (RF-10). Deshacible como cualquier otro cambio. */
+  setLabel(nodeId: string, label: string): void {
+    this.dispatch(setLabel(nodeId, label));
+  }
+
+  /** Colorea un nodo (RF-11). */
+  setColor(nodeId: string, color: string): void {
+    this.dispatch(setColor(nodeId, color));
+  }
+
+  clearSelection(): void {
+    if (this.store.getState().selection.length === 0) return;
+
+    this.dispatch(setSelection([]));
   }
 
   get rootId(): string | undefined {

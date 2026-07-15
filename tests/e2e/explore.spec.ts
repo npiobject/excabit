@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { mockApi, mockApiDown, ROOT_TXID } from './helpers/mock-api';
+import { skipTour, useLocale } from './helpers/setup';
 
 /** Lee el MODELO, no los píxeles: es lo único que prueba BUG-013 de verdad. */
 const nodeCount = (page: Page) =>
@@ -19,6 +20,8 @@ async function searchRoot(page: Page): Promise<void> {
 
 test.beforeEach(async ({ page }) => {
   await mockApi(page);
+  await skipTour(page);
+  await useLocale(page, 'es');
   await page.goto('/');
 });
 
@@ -37,21 +40,40 @@ test('RF-03: el botón de ejemplo carga sin teclear nada', async ({ page }) => {
   await expect(page.locator('#search')).toHaveValue(ROOT_TXID);
 });
 
-test('RF-01: un txid inválido da error inline, sin popup', async ({ page }) => {
+test('RF-01: un txid inválido da error inline junto a la búsqueda, sin popup', async ({ page }) => {
   let dialogs = 0;
   page.on('dialog', () => (dialogs += 1));
 
   await page.fill('#search', 'esto-no-es-un-txid');
   await page.click('#searchBtn');
 
-  await expect(page.locator('#error')).toBeVisible();
-  await expect(page.locator('#error')).toContainText('64 caracteres');
+  // «Inline» es literal (RF-01): el error va pegado al input que hay que
+  // corregir, no en un toast en la esquina ni en un popup.
+  await expect(page.locator('#searchError')).toBeVisible();
+  await expect(page.locator('#searchError')).toContainText('64 caracteres');
+  await expect(page.locator('#searchWrap')).toHaveClass(/invalid/);
+  await expect(page.locator('#search')).toHaveAttribute('aria-invalid', 'true');
+
   // BUG-003: el legacy hacía alert() desde la capa de red.
   expect(dialogs).toBe(0);
   expect(await nodeCount(page)).toBe(0);
 });
 
-test('RF-29 / BUG-003: si la red se cae, hay error visible y ningún alert', async ({ page }) => {
+test('RF-01: corregir la entrada limpia el error inline', async ({ page }) => {
+  await page.fill('#search', 'basura');
+  await page.click('#searchBtn');
+  await expect(page.locator('#searchError')).toBeVisible();
+
+  await page.fill('#search', ROOT_TXID);
+  await page.click('#searchBtn');
+
+  await expect(page.locator('#searchError')).toBeHidden();
+  await expect.poll(() => nodeCount(page)).toBe(5);
+});
+
+test('RF-29 / BUG-003: si la red se cae, sale un toast con reintento y ningún alert', async ({
+  page,
+}) => {
   let dialogs = 0;
   page.on('dialog', () => (dialogs += 1));
   await mockApiDown(page);
@@ -59,7 +81,13 @@ test('RF-29 / BUG-003: si la red se cae, hay error visible y ningún alert', asy
   await page.fill('#search', ROOT_TXID);
   await page.click('#searchBtn');
 
-  await expect(page.locator('#error')).toBeVisible();
+  // Un fallo de red no es culpa de lo que escribiste: va a un toast con causa
+  // y reintento, y no bloquea el canvas (RF-29).
+  const toast = page.locator('.toast');
+  await expect(toast).toBeVisible({ timeout: 15_000 });
+  await expect(toast).toContainText('proveedor');
+  await expect(toast.getByRole('button', { name: 'Reintentar' })).toBeVisible();
+
   expect(dialogs).toBe(0);
 });
 

@@ -142,6 +142,49 @@ encaja mejor con el resto de la UI. El shell de la Fase 3 es mínimo a propósit
 - Top bar, toolbar, panel lateral (Detalles/Heurísticas/Investigación), command palette, overlay de atajos, toasts, tema (tokens del mock), i18n ES/EN, tour.
 - **Salida**: la UI real coincide con el mock (screenshots Playwright); RF-26 verificado (toda acción por 3 vías); axe-core sin errores graves; RF-29/30 en verde.
 
+### Resultado (cerrada el 2026-07-15)
+
+| Criterio de salida | Resultado |
+|---|---|
+| La UI coincide con el mock | ✅ workspace completo: top bar, toolbar, canvas con cuadrícula, panel, minimapa, status bar, zoom |
+| RF-26 (3 vías por acción) | ✅ registro único: toolbar, palette y atajos salen de él y no pueden divergir |
+| axe-core sin errores graves | ✅ 0 violaciones serias/críticas en vacío, workspace, palette, atajos y tour |
+| RF-29/30 | ✅ toasts con reintento y cero `alert()`; ES/EN con paridad de claves verificada |
+
+360 tests unit + 62 E2E. También el **minimapa (RF-13)**, que arrastraba la Fase 3.
+
+**Corrección a docs/06 §7 — los tokens NO cumplían AA.** El doc daba por
+«verificado» el contraste de los tokens y axe-core lo desmiente: `--text-faint`
+(#6e7681) sobre `--surface` da **3,76:1** y AA exige 4,5:1 para texto pequeño
+(la status bar es de 11 px). Como RNF-05 también está aprobado, se corrige el
+token a **#7d8590** (4,74:1, mismo tono azulado) en vez de rebajar el listón.
+Igual con el `<kbd>`, que se quedaba en 4,45:1. **Los tokens del mock quedan
+corregidos en este punto**; el resto se mantiene tal cual.
+
+**Corrección al mock**: mostraba el badge `52` en la tx raíz. El valor real es
+**60** (verificado en la Fase 2). Actualizado en `mocks/explorer.html` para que
+no quede como referencia contradictoria.
+
+Decisiones tomadas al implementar:
+
+- **RF-01 se cumple literalmente**: la entrada mal formada da un error *inline*
+  pegado a la búsqueda (con `aria-invalid`), no un toast. Los toasts son para
+  errores de red (RF-29): un fallo del proveedor no es culpa de lo que escribiste.
+- **`i18n/format.ts`, no `ui/format.ts`**: el grafo también necesita formatear
+  importes y la regla de fronteras prohíbe `graph → ui`. Formatear un importe es
+  traducirlo a la convención del lector.
+- **El score se inyecta en el `cy-adapter`** (`scoreOf`): `graph/` no puede
+  depender de `analysis/`, y el grafo no tiene por qué saber cómo se calcula un
+  score, solo cómo pintarlo.
+- **`fit()` no amplía por encima del 100%**: sin tope, una tx sola aparecía al
+  211%. Ajustar puede alejar cuanto haga falta, pero nunca acercar de más.
+- El panel ordena las heurísticas por confianza y las detectadas primero, en vez
+  de fingir un consenso que no existe (docs/00 §3).
+- **RNF-01 se mide en su propio proyecto de Playwright**, tras los demás:
+  compartiendo CPU con 5 workers, la cifra medía el paralelismo, no la app.
+
+**Sigue pendiente de la Fase 3**: RNF-01 real (~46 fps con 300 nodos, no 60).
+
 ## Fase 5 — Persistencia y export (est. 1-2 semanas)
 
 - `.excabit.json` v2 + migrador del formato legacy, autosave IndexedDB, export PNG/SVG/CSV.

@@ -15,7 +15,9 @@
  * que es la enfermedad del legacy (BUG-013/BUG-020).
  */
 import cytoscape, { type Core, type ElementDefinition, type NodeSingular } from 'cytoscape';
-import type { Graph, GraphNode } from '@/core/graph-model';
+import type { Graph, GraphEdge, GraphNode } from '@/core/graph-model';
+import type { NormalizedTx } from '@/core/types';
+import { formatBtc, shortHash } from '@/i18n/format';
 import { graphStylesheet } from './styles';
 
 export interface CyAdapterOptions {
@@ -24,31 +26,94 @@ export interface CyAdapterOptions {
   headless?: boolean;
   /** Id de la tx raíz, para destacarla (RF-05). */
   rootId?: string;
+  /**
+   * Score de privacidad de una tx, para el badge del nodo (RF-16).
+   *
+   * Se inyecta en vez de importarlo: `graph/` no puede depender de `analysis/`
+   * (docs/05 §2), y el grafo no tiene por qué saber cómo se calcula un score —
+   * solo cómo pintarlo.
+   */
+  scoreOf?: (tx: NormalizedTx) => { score: number; badge: string };
 }
 
 export type NodeMovedHandler = (id: string, position: { x: number; y: number }) => void;
 export type ExpandHandler = (id: string) => void;
 export type SelectionHandler = (ids: string[]) => void;
 
-function nodeData(node: GraphNode, rootId: string | undefined): ElementDefinition['data'] {
+/**
+ * Texto que se pinta DENTRO del nodo (docs/06 §3).
+ *
+ * Cytoscape dibuja en canvas: no hay HTML dentro del nodo, así que la "tarjeta"
+ * del mock se compone como texto multilínea. La etiqueta del usuario (RF-10)
+ * manda sobre el id corto: si se molestó en poner un nombre, es lo que quiere
+ * leer.
+ */
+function displayOf(node: GraphNode, score: number | undefined): string {
+  if (node.kind === 'cluster') return node.label ?? '';
+
+  if (node.kind === 'address') {
+    return node.label ?? shortHash(node.address ?? node.id, 6, 4);
+  }
+
+  const tx = node.tx;
+  if (tx === undefined) return node.label ?? shortHash(node.id);
+
+  const total = tx.vout.reduce((sum, out) => sum + out.value, 0n);
+  // El badge de score va en la misma línea del id, como en el mock: es lo
+  // primero que se mira y lo que resume la tx en un número.
+  const head = `${node.label ?? shortHash(tx.txid)}${score === undefined ? '' : `   ${String(score)}`}`;
+  const block = tx.blockHeight === null ? 'mempool' : `bloque ${tx.blockHeight.toLocaleString()}`;
+
+  return [
+    head,
+    block,
+    formatBtc(total),
+    `${String(tx.vin.length)} in · ${String(tx.vout.length)} out`,
+  ].join('\n');
+}
+
+function nodeData(
+  node: GraphNode,
+  rootId: string | undefined,
+  scoreOf: CyAdapterOptions['scoreOf'],
+): ElementDefinition['data'] {
+  const analysis = node.tx !== undefined && scoreOf !== undefined ? scoreOf(node.tx) : undefined;
+
   return {
     id: node.id,
     kind: node.kind,
     label: node.label ?? '',
+    display: displayOf(node, analysis?.score),
+    ...(analysis === undefined ? {} : { score: analysis.score, scoreBadge: analysis.badge }),
     ...(node.color === undefined ? {} : { color: node.color }),
     ...(node.parent === undefined ? {} : { parent: node.parent }),
     ...(node.id === rootId ? { isRoot: true } : {}),
   };
 }
 
+/** La arista muestra el importe que mueve: es de lo que va la app. */
+function edgeData(edge: GraphEdge): ElementDefinition['data'] {
+  return {
+    id: edge.id,
+    source: edge.from,
+    target: edge.to,
+    kind: edge.kind,
+    value: edge.value.toString(),
+    display: formatBtc(edge.value).replace(' BTC', ''),
+    ...(edge.isUtxo === undefined ? {} : { isUtxo: edge.isUtxo }),
+  };
+}
+
 export class CyAdapter {
   readonly cy: Core;
   private rootId: string | undefined;
+  private readonly scoreOf: CyAdapterOptions['scoreOf'];
   /** Evita que `sync()` dispare los handlers de interacción del usuario. */
   private syncing = false;
 
   constructor(options: CyAdapterOptions = {}) {
     this.rootId = options.rootId;
+    this.scoreOf = options.scoreOf;
     this.cy = cytoscape({
       ...(options.container === undefined ? {} : { container: options.container }),
       headless: options.headless ?? false,
@@ -102,7 +167,7 @@ export class CyAdapter {
         if (existing.empty()) {
           this.cy.add({
             group: 'nodes',
-            data: nodeData(node, this.rootId),
+            data: nodeData(node, this.rootId, this.scoreOf),
             position: { x: node.x, y: node.y },
           });
           continue;
@@ -115,7 +180,7 @@ export class CyAdapter {
           existing.move({ parent: node.parent ?? null });
         }
 
-        existing.data(nodeData(node, this.rootId));
+        existing.data(nodeData(node, this.rootId, this.scoreOf));
         const position = existing.position();
         // Escribir la posición siempre reiniciaría un drag en curso.
         if (position.x !== node.x || position.y !== node.y) {
@@ -126,20 +191,46 @@ export class CyAdapter {
       // 3. Aristas (después de los nodos: necesitan sus extremos).
       for (const edge of Object.values(graph.edges)) {
         const existing = this.cy.getElementById(edge.id);
-        const data = {
-          id: edge.id,
-          source: edge.from,
-          target: edge.to,
-          kind: edge.kind,
-          value: edge.value.toString(),
-          ...(edge.isUtxo === undefined ? {} : { isUtxo: edge.isUtxo }),
-        };
+        const data = edgeData(edge);
 
         if (existing.empty()) this.cy.add({ group: 'edges', data });
         else existing.data(data);
       }
+
+      // 4. Marcas que dependen del conjunto, no del nodo suelto: una dirección
+      // es "reutilizada" si toca la misma tx por los dos lados (H-07), y es UTXO
+      // si solo la alimenta una salida sin gastar.
+      this.markAddressRoles(graph);
     } finally {
       this.syncing = false;
+    }
+  }
+
+  /**
+   * Roles visuales de las direcciones (docs/06 §3).
+   *
+   * - **UTXO** (diamante azul): solo la alimenta una salida sin gastar y no
+   *   gasta en ninguna tx del grafo. Es dinero parado.
+   * - **Reutilizada** (borde ámbar): entra y sale de la misma tx — la señal de
+   *   H-07, la heurística de más confianza.
+   */
+  private markAddressRoles(graph: Graph): void {
+    for (const node of Object.values(graph.nodes)) {
+      if (node.kind !== 'address') continue;
+
+      const incoming = Object.values(graph.edges).filter((edge) => edge.to === node.id);
+      const outgoing = Object.values(graph.edges).filter((edge) => edge.from === node.id);
+
+      const isUtxo = outgoing.length === 0 && incoming.some((edge) => edge.isUtxo === true);
+      const reused = incoming.some((incomingEdge) =>
+        outgoing.some((outgoingEdge) => outgoingEdge.to === incomingEdge.from),
+      );
+
+      const element = this.cy.getElementById(node.id);
+      if (element.empty()) continue;
+
+      element.data('isUtxo', isUtxo);
+      element.data('reused', reused);
     }
   }
 
@@ -188,9 +279,22 @@ export class CyAdapter {
     this.cy.on('select unselect', emit);
   }
 
-  /** Encaja el grafo en la vista (RF-08). Viewport, no modelo. */
+  /**
+   * Encaja el grafo en la vista (RF-08). Viewport, no modelo.
+   *
+   * Con tope al 100%: `fit()` a secas amplía hasta llenar la pantalla, y con
+   * una sola tx el grafo aparecía al 211% — enorme y desconcertante. Ajustar
+   * puede alejar cuanto haga falta, pero nunca acercar más de lo natural.
+   */
   fit(): void {
-    this.cy.fit(undefined, 40);
+    this.cy.fit(undefined, 48);
+    if (this.cy.zoom() > 1) {
+      this.cy.zoom({
+        level: 1,
+        renderedPosition: { x: this.cy.width() / 2, y: this.cy.height() / 2 },
+      });
+      this.cy.center();
+    }
   }
 
   destroy(): void {

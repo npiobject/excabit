@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { mockApi, ROOT_TXID } from './helpers/mock-api';
+import { skipTour, useLocale } from './helpers/setup';
 
 /**
  * Regresión de BUG-015.
@@ -23,6 +24,8 @@ const modelPositions = (page: Page) =>
 
 test.beforeEach(async ({ page }) => {
   await mockApi(page);
+  await skipTour(page);
+  await useLocale(page, 'es');
   await page.goto('/');
   await page.fill('#search', ROOT_TXID);
   await page.click('#searchBtn');

@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { mockApi, ROOT_TXID } from './helpers/mock-api';
+import { skipTour, useLocale } from './helpers/setup';
 
 /**
  * RF-09 y regresión de BUG-017.
@@ -25,6 +26,8 @@ const selectInScene = (page: Page, ids: string[]) =>
 
 test.beforeEach(async ({ page }) => {
   await mockApi(page);
+  await skipTour(page);
+  await useLocale(page, 'es');
   await page.goto('/');
   await page.fill('#search', ROOT_TXID);
   await page.click('#searchBtn');

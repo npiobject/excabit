@@ -1,21 +1,40 @@
 /*
- * Tokens del mock aprobado en la Fase 0 (mocks/assets/tokens.css, docs/06).
- * Se copian tal cual: el mock es la referencia visual y sus tokens quedaron
- * como definitivos.
+ * Tema del workspace (docs/06).
  *
- * Shell mínimo de la Fase 3; la Fase 4 monta la UI completa sobre estos mismos
- * tokens.
+ * Los tokens son los del mock aprobado en la Fase 0 (mocks/assets/tokens.css):
+ * quedaron como definitivos, así que se copian tal cual.
+ *
+ * Concepto: mesa de trabajo forense. El grafo es el protagonista y la UI se
+ * retira a los bordes.
  */
+
 :root {
   --bg: #0d1117;
   --surface: #161b22;
   --surface-2: #1f2630;
+  --surface-3: #262e39;
   --border: #2d333b;
 
   --text: #e6edf3;
   --text-dim: #8b949e;
+  /*
+   * Corregido respecto al mock (#6e7681 → #7d8590).
+   *
+   * docs/06 §7 daba por «verificado» el contraste AA de los tokens, pero
+   * axe-core lo desmiente: #6e7681 sobre --surface da 3,76:1 y AA exige 4,5:1
+   * para texto pequeño (la status bar es de 11 px). Como RNF-05 también está
+   * aprobado, se corrige el token en vez de rebajar el listón de accesibilidad.
+   * #7d8590 da 4,74:1 y conserva el tono azulado del original.
+   */
+  --text-faint: #7d8590;
 
-  --accent: #f7931a;
+  --accent: #f7931a; /* naranja Bitcoin: CTA, tx raíz, foco */
+  --accent-dim: #b96e13;
+  --input-c: #3fb950; /* verde: entradas */
+  --output-c: #f85149; /* rojo: salidas */
+  --utxo-c: #58a6ff; /* azul: UTXO */
+  --warn: #d29922; /* ámbar: heurística detectada */
+  --ok: #3fb950;
   --bad: #f85149;
 
   --font-ui: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -24,18 +43,55 @@
   --radius: 8px;
   --radius-sm: 5px;
   --topbar-h: 52px;
+  --toolbar-w: 52px;
+  --panel-w: 320px;
+  --status-h: 26px;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html,
 body {
+  height: 100%;
   margin: 0;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-ui);
+  font-size: 13px;
 }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+  flex: none;
+}
+
+/* ---------- TOP BAR ---------- */
 
 #topbar {
   display: flex;
@@ -45,24 +101,71 @@ body {
   padding: 0 12px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
+  flex: none;
+}
+
+#logo {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+  user-select: none;
+}
+#logo b {
+  color: var(--text-dim);
+}
+#logo i {
+  color: var(--accent);
+  font-style: normal;
+}
+
+#searchWrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  max-width: 620px;
+  height: 32px;
+  padding: 0 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+#searchWrap:focus-within {
+  border-color: var(--accent);
+}
+#searchWrap .icon {
+  color: var(--text-faint);
+  width: 15px;
+  height: 15px;
+}
+#searchWrap.invalid {
+  border-color: var(--bad);
+}
+
+#searchError {
+  margin: 0;
+  padding: 7px 12px;
+  background: color-mix(in srgb, var(--bad) 12%, transparent);
+  border-bottom: 1px solid var(--bad);
+  color: var(--bad);
+  font-size: 12px;
+  flex: none;
+}
+#searchError[hidden] {
+  display: none;
 }
 
 #search {
   flex: 1;
   min-width: 0;
-  height: 32px;
-  padding: 0 10px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  background: none;
+  border: 0;
   color: var(--text);
   font-family: var(--font-mono);
   font-size: 12px;
 }
-
 #search:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: none;
 }
 
 button {
@@ -76,9 +179,9 @@ button {
   font-size: 13px;
   cursor: pointer;
 }
-
 button:hover {
-  border-color: var(--accent);
+  background: var(--surface-3);
+  border-color: var(--accent-dim);
 }
 
 #searchBtn {
@@ -87,27 +190,642 @@ button:hover {
   color: #1a1205;
   font-weight: 600;
 }
+#searchBtn:hover {
+  background: #ffa733;
+}
 
-#status {
-  min-width: 70px;
+button.ghost {
+  background: none;
+  color: var(--text-dim);
+}
+button.icon-only {
+  width: 32px;
+  padding: 0;
+}
+
+kbd {
+  padding: 1px 5px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  /* --text-dim sobre --surface-3 se queda en 4,45:1, a un pelo del 4,5 que
+     exige AA a 10 px. Un tono más claro y pasa. */
+  color: #a3adb8;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+#network,
+#statusNetwork {
+  height: 32px;
+  padding: 0 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/* ---------- WORKSPACE ---------- */
+
+#workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+#toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: var(--toolbar-w);
+  padding: 8px 0;
+  align-items: center;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  flex: none;
+}
+
+#toolbar button {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  border-radius: var(--radius-sm);
+}
+#toolbar button:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
+}
+#toolbar button[aria-pressed='true'] {
+  background: var(--surface-3);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+#toolbar button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Tooltip con el atajo: la afordancia que el legacy no tenía (RF-26). */
+#toolbar button::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 4px 8px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  z-index: 20;
+}
+#toolbar button:hover::after,
+#toolbar button:focus-visible::after {
+  opacity: 1;
+}
+
+#canvasArea {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+#graph {
+  position: absolute;
+  inset: 0;
+  /* Cuadrícula sutil: da sensación de mesa de trabajo y ayuda a alinear. */
+  background-image:
+    linear-gradient(rgba(45, 51, 59, 0.4) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(45, 51, 59, 0.4) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+#empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+  pointer-events: none;
+}
+#empty[hidden] {
+  display: none;
+}
+#empty svg {
+  width: 150px;
+  margin-bottom: 6px;
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 2;
+}
+#empty h1 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+#empty p {
+  margin: 0;
+  color: var(--text-dim);
+}
+#empty button {
+  margin-top: 10px;
+  pointer-events: auto;
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+
+#zoomControls {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#zoomControls button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: var(--surface);
+  color: var(--text-dim);
+}
+
+/* ---------- MINIMAPA (RF-13) ---------- */
+
+#minimap {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 168px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+#minimapHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px 4px 8px;
+  color: var(--text-faint);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+}
+#minimapHead button {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--text-faint);
+  line-height: 1;
+}
+#minimapBody {
+  height: 104px;
+  border-top: 1px solid var(--border);
+}
+#minimap.collapsed #minimapBody {
+  display: none;
+}
+
+/* ---------- PANEL LATERAL ---------- */
+
+#panel {
+  position: relative;
+  width: var(--panel-w);
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  flex: none;
+  transition: width 0.16s ease;
+}
+#panel.collapsed {
+  width: 0;
+}
+#panel.collapsed #panelInner {
+  display: none;
+}
+
+#panelToggle {
+  position: absolute;
+  left: -13px;
+  top: 12px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: var(--surface-2);
+  border-radius: 50%;
+  color: var(--text-dim);
+  font-size: 10px;
+  z-index: 5;
+}
+#panel.collapsed #panelToggle {
+  transform: rotate(180deg);
+}
+
+#panelInner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+#tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+#tabs button {
+  flex: 1;
+  height: 38px;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+#tabs button[aria-selected='true'] {
+  border-bottom-color: var(--accent);
+  color: var(--text);
+}
+#tabs button:hover {
+  background: var(--surface-2);
+}
+
+[role='tabpanel'] {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto;
+}
+[role='tabpanel'][hidden] {
+  display: none;
+}
+
+.hash {
+  display: block;
+  width: 100%;
+  padding: 7px 8px;
+  margin-bottom: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-align: left;
+  word-break: break-all;
+  cursor: copy;
+}
+.hash:hover {
+  border-color: var(--accent-dim);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(45, 51, 59, 0.5);
+}
+.row dt {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+.row dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-align: right;
+}
+dl {
+  margin: 0;
+}
+
+.link {
+  display: inline-block;
+  margin-top: 12px;
+  color: var(--accent);
+  font-size: 12px;
+  text-decoration: none;
+}
+.link:hover {
+  text-decoration: underline;
+}
+
+.muted {
   color: var(--text-dim);
   font-size: 12px;
 }
 
-#error {
-  padding: 8px 12px;
-  background: color-mix(in srgb, var(--bad) 12%, transparent);
-  border-bottom: 1px solid var(--bad);
+/* ---------- HEURÍSTICAS (RF-16) ---------- */
+
+#scoreBox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  margin-bottom: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+#scoreValue {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+}
+#scoreBox.green #scoreValue {
+  color: var(--ok);
+}
+#scoreBox.amber #scoreValue {
+  color: var(--warn);
+}
+#scoreBox.red #scoreValue {
   color: var(--bad);
-  font-size: 13px;
+}
+#scoreBox span {
+  color: var(--text-dim);
+  font-size: 12px;
 }
 
-#error[hidden] {
-  display: none;
+.heuristic {
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(45, 51, 59, 0.5);
+}
+.heuristic-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.heuristic-name {
+  flex: 1;
+  font-size: 12px;
+}
+.heuristic-conf {
+  color: var(--text-faint);
+  font-size: 10px;
+}
+.heuristic p {
+  margin: 5px 0 0;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.45;
 }
 
-#graph {
+/* Semáforo: ● detectada / ○ no aplica / − sin datos. La forma acompaña al
+   color, nunca el color solo (RNF-05). */
+.semaphore {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+.detected .semaphore {
+  background: var(--warn);
+  box-shadow: 0 0 0 3px rgba(210, 153, 34, 0.16);
+}
+.not-applicable .semaphore {
+  border: 1px solid var(--text-faint);
+}
+.insufficient-data .semaphore {
+  height: 1px;
+  border-radius: 0;
+  background: var(--text-faint);
+}
+.detected .heuristic-name {
+  color: var(--text);
+}
+.not-applicable .heuristic-name,
+.insufficient-data .heuristic-name {
+  color: var(--text-dim);
+}
+
+/* ---------- STATUS BAR ---------- */
+
+#statusbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: var(--status-h);
+  padding: 0 12px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  color: var(--text-faint);
+  font-size: 11px;
+  flex: none;
+}
+#statusbar .spacer {
+  flex: 1;
+}
+#statusbar #statusNetwork {
+  height: auto;
+  padding: 0;
+  background: none;
+  border: 0;
+  font-size: 11px;
+}
+.dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+.dot.warn {
+  background: var(--warn);
+}
+.dot.bad {
+  background: var(--bad);
+}
+
+/* ---------- PALETTE / OVERLAYS ---------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  background: rgba(1, 4, 9, 0.6);
+  z-index: 50;
+}
+
+#paletteBox {
+  width: min(560px, 92vw);
+  margin: 12vh auto auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 16px 48px rgba(1, 4, 9, 0.5);
+  overflow: hidden;
+}
+#paletteInput {
   width: 100%;
-  height: calc(100vh - var(--topbar-h));
-  background: var(--bg);
+  height: 44px;
+  padding: 0 14px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+}
+#paletteInput:focus {
+  outline: none;
+}
+#paletteList {
+  max-height: 320px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  overflow-y: auto;
+}
+#paletteList li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+#paletteList li[aria-selected='true'] {
+  background: var(--surface-2);
+}
+#paletteList li .icon {
+  color: var(--text-faint);
+  width: 15px;
+  height: 15px;
+}
+#paletteList li span {
+  flex: 1;
+}
+#paletteHint {
+  padding: 7px 12px;
+  border-top: 1px solid var(--border);
+  color: var(--text-faint);
+  font-size: 10px;
+}
+
+#shortcutsBox {
+  width: min(560px, 92vw);
+  max-height: 74vh;
+  margin: auto;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-y: auto;
+}
+#shortcutsBox h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+#shortcutsBox dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 7px 16px;
+  align-items: center;
+}
+#shortcutsBox dt {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+#shortcutsBox dd {
+  margin: 0;
+  text-align: right;
+}
+
+/* ---------- TOASTS (RF-29) ---------- */
+
+#toasts {
+  position: fixed;
+  right: 14px;
+  bottom: calc(var(--status-h) + 14px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 60;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 380px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--bad);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 6px 20px rgba(1, 4, 9, 0.4);
+  font-size: 12px;
+}
+.toast button {
+  height: 26px;
+  padding: 0 9px;
+  font-size: 11px;
+}
+
+/* ---------- TOUR (RF-32) ---------- */
+
+#tourBox {
+  width: min(380px, 92vw);
+  margin: auto auto 14vh;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--accent-dim);
+  border-radius: var(--radius);
+  box-shadow: 0 16px 48px rgba(1, 4, 9, 0.5);
+}
+#tourBox h2 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+#tourBox p {
+  margin: 0 0 14px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+#tourFoot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#tourDots {
+  flex: 1;
+  display: flex;
+  gap: 5px;
+}
+#tourDots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+}
+#tourDots i.on {
+  background: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
 }

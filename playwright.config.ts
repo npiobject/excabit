@@ -17,7 +17,19 @@ export default defineConfig({
     baseURL: 'http://localhost:4173',
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /performance\.spec\.ts/ },
+    {
+      // RNF-01 se mide aparte y al final: compartiendo CPU con 5 workers, la
+      // cifra mide el paralelismo de Playwright, no la app. `dependencies`
+      // hace que arranque cuando el resto ha terminado.
+      name: 'performance',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /performance\.spec\.ts/,
+      dependencies: ['chromium'],
+      fullyParallel: false,
+    },
+  ],
   webServer: {
     // Se prueba el build, no el dev server: es lo que llega al usuario.
     command: 'npm run build && npm run preview -- --port 4173 --strictPort',
