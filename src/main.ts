@@ -21,6 +21,7 @@ import { Tour } from './ui/tour';
 import { Minimap } from './graph/minimap';
 import { traceTaint } from './analysis/taint';
 import { nodesInRange, timeRangeOf } from './analysis/timeline';
+import { foldableOf } from './analysis/folding';
 import { TOKENS } from './graph/styles';
 import { loadInvestigation, saveInvestigation } from './persistence/investigation';
 import { Autosave } from './persistence/autosave';
@@ -154,6 +155,7 @@ function boot(): void {
   const statusCounts = requireElement('statusCounts');
   const statusMessage = requireElement('statusMessage');
   const statusZoom = requireElement('statusZoom');
+  const statusFold = requireElement('statusFold');
 
   /* ---------- Render derivado del estado ---------- */
 
@@ -292,6 +294,9 @@ function boot(): void {
           String(!panelRoot.classList.contains('collapsed')),
         );
         break;
+      case 'toggleFold':
+        toggleFold();
+        break;
       case 'toggleTimeline':
         toggleTimeline();
         break;
@@ -324,6 +329,77 @@ function boot(): void {
         break;
     }
   }
+
+  /* ---------- Plegar detalles (RF-36.3/36.4) ---------- */
+
+  /** Hay nodos plegados. La misma tecla los devuelve: es un modo de ver. */
+  let folded = false;
+  /**
+   * Vecinos que el usuario ha abierto pulsando su «+N».
+   *
+   * Se guardan aparte del modo global: quien abre uno quiere ver **ese**, no
+   * salir del modo. Y si el grafo cambia y se repliega, lo que abrió sigue
+   * abierto — deshacerle eso sería quitarle de la pantalla lo que acaba de pedir.
+   */
+  const unfolded = new Set<string>();
+
+  /** Lo plegable de verdad: lo que se puede plegar, menos lo que el usuario abrió. */
+  function currentlyFoldable(): Set<string> {
+    const graph = app.store.getState().graph;
+    const foldable = foldableOf(graph);
+
+    for (const id of foldable) {
+      const vecinos = Object.values(graph.edges)
+        .filter((edge) => edge.from === id || edge.to === id)
+        .map((edge) => (edge.from === id ? edge.to : edge.from));
+
+      if (vecinos.some((vecino) => unfolded.has(vecino))) foldable.delete(id);
+    }
+
+    return foldable;
+  }
+
+  function applyFold(): void {
+    const foldable = currentlyFoldable();
+    app.adapter.setFolded(foldable);
+    // Cuántos hay plegados y cómo verlos: plegar no es esconder (RF-36.4). Sin
+    // esto, el usuario ve menos nodos que hace un segundo y no sabe por qué.
+    statusFold.textContent =
+      foldable.size === 0 ? '' : t('fold.folded', { count: formatNumber(foldable.size) });
+  }
+
+  function toggleFold(): void {
+    if (folded) {
+      app.adapter.setFolded(null);
+      folded = false;
+      unfolded.clear();
+      statusFold.textContent = '';
+
+      return;
+    }
+
+    if (foldableOf(app.store.getState().graph).size === 0) {
+      toasts.show({ message: t('fold.none'), timeout: 4000 });
+
+      return;
+    }
+
+    folded = true;
+    applyFold();
+  }
+
+  // Un click en «+N» abre lo de ese vecino, sin salir del modo (RF-36.4).
+  app.adapter.onUnfoldRequested((hostId) => {
+    unfolded.add(hostId);
+    applyFold();
+  });
+
+  // Si el grafo cambia, lo plegado ya no corresponde a lo que hay: se recalcula.
+  app.store.subscribe(() => {
+    if (!folded) return;
+
+    applyFold();
+  });
 
   /* ---------- Línea temporal (RF-35) ---------- */
 

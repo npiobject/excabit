@@ -161,5 +161,8 @@
   "timeline.to": "Hasta",
   "timeline.close": "Cerrar la línea temporal",
   "timeline.count": "{inside} de {total} txs",
-  "timeline.nothing": "No hay rango que filtrar: hacen falta al menos dos transacciones con fechas distintas."
+  "timeline.nothing": "No hay rango que filtrar: hacen falta al menos dos transacciones con fechas distintas.",
+  "action.toggleFold": "Plegar detalles",
+  "fold.folded": "{count} plegados · pulsa P para verlos",
+  "fold.none": "No hay nada que plegar: todas las direcciones llevan a algún sitio."
 }

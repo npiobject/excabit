@@ -232,6 +232,53 @@ export function graphStylesheet(): StylesheetStyle[] {
     // rastro no devuelve a la vista lo que el rango esconde.
     { selector: '.dimmed', style: { opacity: 0.18 } },
     { selector: '.outOfRange', style: { opacity: 0.18 } },
+
+    /*
+     * Plegado (RF-36.3/36.4): `display: none`, no opacidad.
+     *
+     * Los otros dos filtros apagan lo que sobra pero lo dejan ocupando su sitio,
+     * que es lo correcto para ellos: el nodo sigue ahí, en su contexto. Plegar
+     * viene a resolver justo lo contrario —que el grafo no cabe— y un nodo
+     * translúcido seguiría estirándolo. Cytoscape se lleva sus aristas y encoge
+     * los compound.
+     */
+    { selector: 'node.folded', style: { display: 'none' } },
+
+    /*
+     * El resumen «+28» (RF-36.4): lo que queda donde había 28 direcciones.
+     *
+     * Se parece a una dirección —es lo que representa— pero con el borde
+     * punteado del cluster, que en esta app ya significa «aquí dentro hay
+     * varias cosas». Y el cursor es una mano: se puede abrir.
+     */
+    {
+      selector: 'node[kind = "foldSummary"]',
+      style: {
+        shape: 'round-rectangle',
+        width: 44,
+        height: 30,
+        'background-color': TOKENS.surface2,
+        'border-width': 1,
+        'border-color': TOKENS.textDim,
+        'border-style': 'dashed',
+        label: 'data(display)',
+        color: TOKENS.textDim,
+        'font-family': FONT_MONO,
+        'font-size': 11,
+        'min-zoomed-font-size': MIN_READABLE_PX,
+        'text-valign': 'center',
+        'text-halign': 'center',
+      },
+    },
+    {
+      selector: 'edge[source ^= "fold:"]',
+      style: {
+        'line-color': TOKENS.border,
+        'line-style': 'dotted',
+        'target-arrow-shape': 'none',
+        label: '',
+      },
+    },
     {
       selector: 'node.tainted',
       style: {

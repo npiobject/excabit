@@ -36,6 +36,19 @@ export interface CyAdapterOptions {
   scoreOf?: (tx: NormalizedTx) => { score: number; badge: string };
 }
 
+/**
+ * Los nodos «+N» del plegado (RF-36.4) son de la VISTA, no del modelo.
+ *
+ * El store no sabe de ellos —plegar no toca los datos— así que `sync()` los
+ * borraría por no encontrarlos en el grafo. El prefijo es lo que los distingue,
+ * y por eso no puede chocar con `tx:` ni `addr:` ni `cluster:`.
+ */
+const FOLD_SUMMARY_PREFIX = 'fold:';
+const FOLD_SUMMARY_SELECTOR = '[kind = "foldSummary"]';
+const FOLD_SUMMARY_GAP = 150;
+
+const isFoldSummary = (id: string): boolean => id.startsWith(FOLD_SUMMARY_PREFIX);
+
 export type NodeMovedHandler = (id: string, position: { x: number; y: number }) => void;
 export type ExpandHandler = (id: string) => void;
 export type SelectionHandler = (ids: string[]) => void;
@@ -147,10 +160,11 @@ export class CyAdapter {
     try {
       const wanted = new Set([...Object.keys(graph.nodes), ...Object.keys(graph.edges)]);
 
-      // 1. Fuera lo que ya no está.
+      // 1. Fuera lo que ya no está — salvo los resúmenes de plegado, que son de
+      // la vista y no del modelo: el store no sabe de ellos y aquí los borraría.
       this.cy
         .elements()
-        .filter((element) => !wanted.has(element.id()))
+        .filter((element) => !wanted.has(element.id()) && !isFoldSummary(element.id()))
         .remove();
 
       // 2. Alta o actualización de nodos. Los clusters primero: Cytoscape
@@ -379,6 +393,85 @@ export class CyAdapter {
     } finally {
       this.syncing = false;
     }
+  }
+
+  /**
+   * Pliega los nodos indicados (RF-36.3/36.4): dejan de dibujarse, y en su sitio
+   * queda un **resumen** que dice cuántos hay y los devuelve al pulsarlo.
+   *
+   * `display: none` y no opacidad: un nodo plegado **no ocupa sitio**, y de eso
+   * va todo esto — con opacidad seguiría estirando el grafo y el `fit` seguiría
+   * alejando hasta lo ilegible. Cytoscape se lleva sus aristas por delante y
+   * encoge los compound: un cluster con las hijas plegadas queda como una caja
+   * pequeña, que es justo lo que se quiere (RF-36.3).
+   *
+   * **El resumen no es decoración.** Sin él, plegar las 28 entradas de una tx
+   * deja una caja sola en la pantalla: las direcciones no están escondidas, están
+   * desaparecidas, y eso es exactamente lo que RF-36.4 prohíbe. Con él se ve que
+   * hay algo ahí, cuánto, y se abre de un click.
+   *
+   * `null` lo despliega todo.
+   */
+  setFolded(ids: ReadonlySet<string> | null): void {
+    this.syncing = true;
+
+    try {
+      this.cy.nodes(FOLD_SUMMARY_SELECTOR).remove();
+
+      if (ids === null) {
+        this.cy.nodes().removeClass('folded');
+
+        return;
+      }
+
+      this.cy.nodes().forEach((node) => {
+        node.toggleClass('folded', ids.has(node.id()));
+      });
+
+      /*
+       * Un resumen por vecino que se queda a la vista: cuenta cuántos de los
+       * suyos se han plegado. Se cuelga de quien sigue viéndose porque, si no,
+       * flotaría suelto — y un «+28» sin decir de qué no significa nada.
+       */
+      const plegadosPor = new Map<string, number>();
+      for (const id of ids) {
+        const node = this.cy.getElementById(id);
+        if (node.empty()) continue;
+
+        node.connectedEdges().forEach((edge) => {
+          const otro = edge.source().id() === id ? edge.target() : edge.source();
+          if (ids.has(otro.id())) return;
+
+          plegadosPor.set(otro.id(), (plegadosPor.get(otro.id()) ?? 0) + 1);
+        });
+      }
+
+      for (const [anfitrion, count] of plegadosPor) {
+        const host = this.cy.getElementById(anfitrion);
+        if (host.empty()) continue;
+
+        const id = `${FOLD_SUMMARY_PREFIX}${anfitrion}`;
+        const position = host.position();
+        this.cy.add({
+          group: 'nodes',
+          data: { id, kind: 'foldSummary', display: `+${String(count)}`, of: anfitrion },
+          // A la izquierda del anfitrión y un poco abajo: donde estaban los suyos.
+          position: { x: position.x - FOLD_SUMMARY_GAP, y: position.y },
+        });
+        const edgeId = `${id}->${anfitrion}`;
+        this.cy.add({ group: 'edges', data: { id: edgeId, source: id, target: anfitrion } });
+      }
+    } finally {
+      this.syncing = false;
+    }
+  }
+
+  /** El usuario pulsó un resumen: quiere ver lo que hay debajo (RF-36.4). */
+  onUnfoldRequested(handler: (hostId: string) => void): void {
+    this.cy.on('tap', FOLD_SUMMARY_SELECTOR, (event) => {
+      const of = (event.target as NodeSingular).data('of') as string | undefined;
+      if (of !== undefined) handler(of);
+    });
   }
 
   /**

@@ -161,5 +161,8 @@
   "timeline.to": "To",
   "timeline.close": "Close the timeline",
   "timeline.count": "{inside} of {total} txs",
-  "timeline.nothing": "Nothing to filter: this needs at least two transactions with different dates."
+  "timeline.nothing": "Nothing to filter: this needs at least two transactions with different dates.",
+  "action.toggleFold": "Fold details",
+  "fold.folded": "{count} folded · press P to see them",
+  "fold.none": "Nothing to fold: every address leads somewhere."
 }

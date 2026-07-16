@@ -43,10 +43,20 @@ export class ShortcutsOverlay {
     overlay.className = 'overlay';
     overlay.id = 'shortcutsOverlay';
     overlay.innerHTML = `
-      <div id="shortcutsBox" role="dialog" aria-modal="true" aria-label="${t('shortcuts.title')}">
+      <div id="shortcutsBox" role="dialog" aria-modal="true" tabindex="0" aria-label="${t('shortcuts.title')}">
         <h2>${t('shortcuts.title')}</h2>
         <dl>${rows}</dl>
       </div>`;
+    /*
+     * `tabindex="0"` porque la caja tiene `overflow-y: auto` (RNF-05).
+     *
+     * Con la lista de atajos ya larga, el contenido desborda y hay que poder
+     * desplazarlo — y sin foco, quien navega con teclado no puede: vería la
+     * mitad de los atajos y no habría forma de llegar al resto. Es la violación
+     * `scrollable-region-focusable` de axe, y saltó al añadir dos acciones más.
+     * De paso, el `.focus()` de abajo pasa a enfocar algo de verdad: sobre un
+     * `<div>` sin tabindex no hacía nada.
+     */
 
     overlay.addEventListener('mousedown', (event) => {
       if (event.target === overlay) this.close();

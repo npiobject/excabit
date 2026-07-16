@@ -645,6 +645,58 @@ type="range">` rodea **todo** el input, que ocupa la pista entera — parecía u
 caja de texto naranja y tapaba la barra. El foco se marca ahora en el tirador, que
 es donde está la atención, sin perder visibilidad (RNF-05).
 
+### 6.5 — RF-36: que el grafo se pueda leer (2026-07-16)
+
+**El problema, medido antes de tocar nada:** el ejemplo (30 nodos) quedaba al
+**34 %** de zoom y una dirección con 6 txs (170 nodos) al **13 %**, donde una
+etiqueta ocupa 5 px. Un grafo que no cabe en la pantalla no es una interfaz
+visual: es un manchurrón.
+
+Dos causas y ninguna era «hay muchos nodos»:
+
+1. **El 96-97 % de los nodos son direcciones, y el 98-100 % de ellas aparecen una
+   sola vez.** El grafo estaba dominado por nodos que no llevan a ningún sitio.
+2. **El radio crecía lineal con N** y el semicírculo repartía en 180° verticales:
+   el grafo crecía a lo alto mientras la pantalla es apaisada.
+
+| | zoom antes | anillos | + plegado |
+|---|---|---|---|
+| ejemplo (30 nodos) | 34 % | 68 % | **100 %** (2 visibles) |
+| dirección (170 nodos) | 13 % | 37 % | **90 %** (16 visibles) |
+
+Cuatro mecanismos, elegidos por el usuario tras ver los números:
+
+- **RF-36.1 anillos concéntricos**: un anillo de radio `r` admite `π·r/separación`
+  satélites; llenando anillos sucesivos en vez de estirar uno, el radio crece como
+  **√N**. Es lo que hace el sistema solar y no una fila de planetas.
+- **RF-36.2 detalle según el zoom** (`min-zoomed-font-size`): a 37 % una etiqueta
+  de 9 px mide 3,3 — no informa, emborrona. Sin texto se lee **la estructura**, que
+  es lo que se mira cuando se mira el grafo entero.
+- **RF-36.3/36.4 plegado**: las direcciones de paso y las de un cluster se
+  repliegan tras un resumen `+N` que se abre de un click. `display: none` y no
+  opacidad: lo plegado **no ocupa sitio**, que es de lo que iba el problema.
+
+**El resumen `+N` no es decoración: es lo que separa plegar de esconder.** La
+primera versión plegaba y ya: el ejemplo pasaba de 30 nodos a **uno solo** —una
+caja sola en la pantalla, sin rastro de las 28 entradas—. Con el resumen se ve que
+hay algo, cuánto, y se abre. Lo cazó medirlo en la app: los tests estaban en verde.
+
+**Lo que no se pliega importa más que lo que sí**: las direcciones que unen txs
+(**son** la conexión), las señales de privacidad (H-07, UTXO) y todo lo que el
+usuario haya etiquetado, coloreado o anotado. Esconder el hallazgo, o lo que
+alguien se molestó en marcar, es la clase de listeza que hace desconfiar de una
+herramienta.
+
+**Violación de accesibilidad introducida y corregida**: con dos acciones más, el
+overlay de atajos pasó a desbordar y axe cazó `scrollable-region-focusable` — sin
+foco, quien navega con teclado vería la mitad de los atajos y no podría llegar al
+resto. De paso se descubrió que el `.focus()` de esa caja no hacía nada: era un
+`<div>` sin `tabindex`.
+
+**Pendiente**: con 170 nodos sin plegar, los satélites de txs vecinas todavía se
+pisan (6 px) — cada tx coloca los suyos sin saber de las demás. Plegado deja de
+notarse, pero el layout global sigue sin ser consciente de sus vecinos.
+
 ## Riesgos y mitigaciones
 
 | Riesgo | Mitigación |
