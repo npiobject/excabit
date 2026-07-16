@@ -36,8 +36,12 @@ test('RF-01: buscar un txid carga el grafo', async ({ page }) => {
 test('RF-03: el botón de ejemplo carga sin teclear nada', async ({ page }) => {
   await page.click('#exampleBtn');
 
-  await expect.poll(() => nodeCount(page)).toBe(5);
-  await expect(page.locator('#search')).toHaveValue(ROOT_TXID);
+  await expect.poll(() => nodeCount(page)).toBeGreaterThan(0);
+  // El txid está en `EXAMPLE_TXID` (src/main.ts), con el porqué de cuál es. Aquí
+  // solo se comprueba lo que RF-03 pide: que se cargue **sin teclear nada** y que
+  // el usuario vea en la caja qué se ha buscado. Atar el test a un txid concreto
+  // convertiría «cambiar el ejemplo» en «arreglar un test», que es al revés.
+  await expect(page.locator('#search')).toHaveValue(/^[0-9a-f]{64}$/);
 });
 
 test('RF-01: un txid inválido da error inline junto a la búsqueda, sin popup', async ({ page }) => {

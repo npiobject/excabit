@@ -30,7 +30,25 @@ import { askConfirm, askRestore } from './ui/restore-prompt';
 import { Timeline } from './ui/timeline';
 import './ui/theme.css';
 
-const EXAMPLE_TXID = '85e72c0814597ec52d2d178b7125af0e3cfa07821912ca81bf4b1fbe4b4b70f2';
+/**
+ * La tx del botón «Ejemplo» (RF-03): lo primero que ve quien entra sin un txid
+ * a mano, así que enseña de lo que va la app en un click.
+ *
+ * Una **consolidación de 28 entradas**: 30 nodos, y al pulsar `G` sale un
+ * cluster de 28 direcciones de un mismo dueño (H-09). Score 75. Todo cabe en la
+ * pantalla sin tocar el zoom.
+ *
+ * Antes era `85e72c08…`, que da **3 nodos**: la tx reutiliza su dirección de
+ * cambio, así que el grafo entero son una tx y dos direcciones. Enseñaba lo más
+ * pobre que la app sabe hacer. (Es un buen caso de estudio —dos heurísticas que
+ * se contradicen, docs/00 §3— pero eso se aprecia cuando ya sabes mirar, no al
+ * entrar.) Además venía del txid que `exploraGraf.js` reasignaba cuatro veces
+ * seguidas: historia de pruebas fosilizada, BUG-025.
+ *
+ * Ésta, en cambio, es la que el legacy guardaba en `old/clases/txs` — la que su
+ * autor eligió a conciencia.
+ */
+const EXAMPLE_TXID = 'aaeb5265d04d7c89c584a5ecb8dd95cb4ab7773ba6d27eaaff7e08a08f8d530b';
 
 declare global {
   interface Window {
