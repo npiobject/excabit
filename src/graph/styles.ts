@@ -48,6 +48,22 @@ export const TOKENS = {
   taint: '#bc8cff',
 } as const;
 
+/**
+ * Tamaño mínimo en píxeles REALES de pantalla al que se sigue pintando el texto
+ * (RF-36.2).
+ *
+ * Cytoscape lo compara contra `zoom × font-size`: por debajo, no dibuja la
+ * etiqueta. Con 5 px, el texto de una tx (9 px) desaparece por debajo del 55 % de
+ * zoom y el de una dirección (8 px), del 62 %.
+ *
+ * No es un capricho de estilo: a 13 % de zoom una etiqueta mide 1 px y lo único
+ * que hace es emborronar el nodo que hay debajo. Un grafo con 170 manchas
+ * grises ilegibles enseña menos que uno con 170 puntos limpios — el texto que no
+ * se puede leer no informa, solo tapa. Es lo que hacen los mapas: los nombres de
+ * las calles aparecen cuando te acercas.
+ */
+const MIN_READABLE_PX = 5;
+
 const FONT_MONO = "'JetBrains Mono', 'Cascadia Code', Consolas, monospace";
 
 export function graphStylesheet(): StylesheetStyle[] {
@@ -68,6 +84,8 @@ export function graphStylesheet(): StylesheetStyle[] {
         color: TOKENS.text,
         'font-family': FONT_MONO,
         'font-size': 9,
+        // Ver MIN_READABLE_PX: por debajo de esto el texto es suciedad, no dato.
+        'min-zoomed-font-size': MIN_READABLE_PX,
         'text-wrap': 'wrap',
         'text-valign': 'center',
         'text-halign': 'center',
@@ -102,6 +120,8 @@ export function graphStylesheet(): StylesheetStyle[] {
         color: TOKENS.textDim,
         'font-family': FONT_MONO,
         'font-size': 9,
+        // Ver MIN_READABLE_PX: por debajo de esto el texto es suciedad, no dato.
+        'min-zoomed-font-size': MIN_READABLE_PX,
         'text-wrap': 'wrap',
         'text-valign': 'bottom',
         'text-halign': 'center',
@@ -139,6 +159,8 @@ export function graphStylesheet(): StylesheetStyle[] {
         label: 'data(label)',
         color: TOKENS.textDim,
         'font-size': 10,
+        // Ver MIN_READABLE_PX: por debajo de esto el texto es suciedad, no dato.
+        'min-zoomed-font-size': MIN_READABLE_PX,
         'text-valign': 'top',
         'text-margin-y': -4,
         padding: '18px',
@@ -171,6 +193,8 @@ export function graphStylesheet(): StylesheetStyle[] {
         color: TOKENS.textFaint,
         'font-family': FONT_MONO,
         'font-size': 8,
+        // Ver MIN_READABLE_PX: por debajo de esto el texto es suciedad, no dato.
+        'min-zoomed-font-size': MIN_READABLE_PX,
         'text-rotation': 'autorotate',
         'text-background-color': TOKENS.bg,
         'text-background-opacity': 0.85,
