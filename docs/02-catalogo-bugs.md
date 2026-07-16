@@ -16,7 +16,7 @@ Columna «¿v2?»: qué exige del nuevo diseño (test de regresión, decisión d
 
 | ID | Sev. | Dónde | Descripción | ¿v2? |
 |---|---|---|---|---|
-| BUG-001 | S1 | `old/clases/conex.js:15-16` | Dos claves API de NowNodes hardcodeadas en el cliente y publicadas en un repo/página públicos. **Verificado el 2026-07-05: la clave activa devuelve `401 Unknown API_key` (caducada), así que el riesgo residual es nulo — pero la consecuencia es que la app legacy publicada está inoperativa: NowNodes es su única fuente de datos** (llamadas en `bchain.js:80,120,266`). El patrón (secretos en cliente) sigue siendo el defecto a no repetir. | ADR-002: proveedor sin clave por defecto; CI con gitleaks impide reincidir |
+| BUG-001 | S1 | `old/clases/conex.js:15-16` | Dos claves API de NowNodes hardcodeadas en el cliente y publicadas en un repo/página públicos. **Verificado el 2026-07-05: la clave activa devuelve `401 Unknown API_key` (caducada), así que el riesgo residual es nulo — pero la consecuencia es que la app legacy publicada está inoperativa: NowNodes es su única fuente de datos** (llamadas en `bchain.js:80,120,266`). El patrón (secretos en cliente) sigue siendo el defecto a no repetir. **Purgadas de toda la historia de git el 2026-07-16** (`git filter-repo`) al publicar el repo v2: ya no aparecen en ningún commit, solo el marcador `CLAVE-REVOCADA-VER-BUG-001`. | ADR-002: proveedor sin clave por defecto; CI con gitleaks impide reincidir |
 
 ## Red y caché (`conex.js`)
 
@@ -59,6 +59,6 @@ Columna «¿v2?»: qué exige del nuevo diseño (test de regresión, decisión d
 
 ## Resumen
 
-- 1 bug crítico de seguridad (BUG-001) con acción externa pendiente (revocar claves).
+- 1 bug crítico de seguridad (BUG-001), **cerrado**: las claves estaban caducadas (verificado el 2026-07-05) y el 2026-07-16 se purgaron de toda la historia de git antes de publicar la v2.
 - 6 bugs funcionales visibles (BUG-006..009, 012, 013, 016): sobre todo, **las heurísticas llevan años dando resultados parcialmente incorrectos** sin que nadie lo detectara — el argumento más fuerte a favor del enfoque TDD de la v2 ([07-plan-de-tests.md](07-plan-de-tests.md)).
 - El resto son deudas estructurales que la arquitectura de [05-especificacion-tecnica.md](05-especificacion-tecnica.md) elimina por diseño.
