@@ -33,6 +33,8 @@ export type ActionId =
   | 'followFunds'
   | 'cluster'
   | 'export'
+  | 'exportSvg'
+  | 'exportCsv'
   | 'save'
   | 'open'
   | 'palette'
@@ -147,7 +149,14 @@ export const ACTIONS: readonly ActionDefinition[] = [
     needsSelection: true,
   },
   { id: 'fit', i18nKey: 'action.fit', shortcut: '0', icon: ICONS.fit, inToolbar: true },
+  // Tres formatos, tres acciones (RF-26). Un botón «exportar» que abre un menú
+  // sería una cuarta forma de interacción que no está en el registro y que ni la
+  // palette ni el teclado sabrían alcanzar. En la toolbar solo va el PNG: es el
+  // caso común (RF-23 es P1; el CSV de RF-24 es P2), y los otros dos están a un
+  // Ctrl+K de distancia.
   { id: 'export', i18nKey: 'action.export', shortcut: 'e', icon: ICONS.export, inToolbar: true },
+  { id: 'exportSvg', i18nKey: 'action.exportSvg', icon: ICONS.export },
+  { id: 'exportCsv', i18nKey: 'action.exportCsv', icon: ICONS.export },
   { id: 'undo', i18nKey: 'action.undo', shortcut: 'ctrl+z', icon: ICONS.undo },
   { id: 'redo', i18nKey: 'action.redo', shortcut: 'ctrl+y', icon: ICONS.redo },
   { id: 'zoomIn', i18nKey: 'action.zoomIn', shortcut: '+', icon: ICONS.zoomIn },

@@ -270,6 +270,27 @@ export class App {
     return this.rootTxid === undefined ? undefined : txNodeId(this.rootTxid);
   }
 
+  /** El txid raíz, para guardarlo en el fichero (RF-21). */
+  get root(): Txid | undefined {
+    return this.rootTxid;
+  }
+
+  /**
+   * Sustituye la investigación entera por una cargada (RF-21/22).
+   *
+   * **El historial se vacía**: abrir un fichero no es un cambio que se deshaga.
+   * Un Ctrl+Z que devolviera al grafo anterior mezclaría dos investigaciones
+   * distintas en una pila y dejaría al usuario en un estado que no es ni lo que
+   * abrió ni lo que tenía. Cerrar un documento y abrir otro son cosas distintas
+   * de editarlo.
+   */
+  restore(state: InvestigationState, rootTxid: Txid | undefined): void {
+    this.rootTxid = rootTxid;
+    this.history.clear();
+    this.adapter.setRoot(rootTxid === undefined ? '' : txNodeId(rootTxid));
+    this.store.dispatch({ type: 'investigation:restore', apply: () => state });
+  }
+
   destroy(): void {
     this.adapter.destroy();
   }

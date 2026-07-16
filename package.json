@@ -31,6 +31,7 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-import-resolver-typescript": "^4.4.5",
     "eslint-plugin-boundaries": "^7.0.2",
+    "fake-indexeddb": "^6.2.5",
     "fast-check": "^4.9.0",
     "globals": "^15.14.0",
     "msw": "^2.7.0",
@@ -42,6 +43,7 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "cytoscape": "^3.34.0"
+    "cytoscape": "^3.34.0",
+    "zod": "^4.4.3"
   }
 }

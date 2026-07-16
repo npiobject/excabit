@@ -1,0 +1,292 @@
+{
+  "posiTxs": [
+    {
+      "idTx": "85e72c0814597ec52d2d178b7125af0e3cfa07821912ca81bf4b1fbe4b4b70f2",
+      "x": 400,
+      "y": 300,
+      "xCentro": 500,
+      "yCentro": 350,
+      "weight": 4,
+      "io": "X",
+      "tagTx": "Origen del robo",
+      "estado": "pinchado",
+      "color": {
+        "r": 255,
+        "g": 77,
+        "b": 77
+      },
+      "bgColor": {
+        "r": 232,
+        "g": 132,
+        "b": 32
+      },
+      "movido": true,
+      "blockHeight": 300000,
+      "value": 100000,
+      "numVin": 2,
+      "numVout": 2,
+      "blockTime": 1399703554,
+      "fees": 10000,
+      "multiTxs": [],
+      "version": 1,
+      "lockTime": 0,
+      "heuristic": [
+        true,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false
+      ]
+    },
+    {
+      "idTx": "993ced02486f9aaa5a5ed943141e05e436aac054dcea78a560f0f1860c80415a",
+      "x": 900,
+      "y": 150,
+      "xCentro": 1000,
+      "yCentro": 200,
+      "weight": 2,
+      "io": "O",
+      "tagTx": "",
+      "estado": "calculado",
+      "color": {
+        "r": 77,
+        "g": 77,
+        "b": 77
+      },
+      "bgColor": {
+        "r": 0,
+        "g": 0,
+        "b": 255
+      },
+      "movido": false,
+      "blockHeight": 700000,
+      "value": 90000,
+      "numVin": 1,
+      "numVout": 2,
+      "blockTime": 1630000000,
+      "fees": 5000,
+      "multiTxs": [],
+      "version": 2,
+      "lockTime": 0,
+      "heuristic": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "esUtxo": false
+    },
+    {
+      "idTx": "1d053e14643494a05e9a4279c42ec9f8924d52100e2e229c5e0174742d50e912",
+      "x": 900,
+      "y": 500,
+      "xCentro": 1000,
+      "yCentro": 550,
+      "weight": 2,
+      "io": "O",
+      "tagTx": "Casa de cambio?",
+      "estado": "calculado",
+      "color": {
+        "r": 77,
+        "g": 77,
+        "b": 77
+      },
+      "bgColor": {
+        "r": 256,
+        "g": 0,
+        "b": 0
+      },
+      "movido": false,
+      "blockHeight": 710000,
+      "value": 80000,
+      "numVin": 2,
+      "numVout": 3,
+      "blockTime": 1640000000,
+      "fees": 3000,
+      "multiTxs": [],
+      "version": 2,
+      "lockTime": 0,
+      "heuristic": [
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "esUtxo": false
+    },
+    {
+      "idTx": "Multi Txs: 12 - 4500000",
+      "x": 1400,
+      "y": 300,
+      "xCentro": 1500,
+      "yCentro": 350,
+      "weight": 2,
+      "io": "O",
+      "tagTx": "",
+      "estado": "inicial",
+      "color": {
+        "r": 77,
+        "g": 77,
+        "b": 77
+      },
+      "bgColor": {
+        "r": 127,
+        "g": 127,
+        "b": 127
+      },
+      "movido": false,
+      "blockHeight": 0,
+      "value": 4500000,
+      "numVin": 0,
+      "numVout": 0,
+      "blockTime": 0,
+      "fees": 0,
+      "multiTxs": [
+        "aaeb5265d04d7c89c584a5ecb8dd95cb4ab7773ba6d27eaaff7e08a08f8d530b",
+        "3ddb2ad2c1a1a1a1b2b2b2b2c3c3c3c3d4d4d4d4e5e5e5e5f6f6f6f6d9427045"
+      ],
+      "version": 0,
+      "lockTime": 0,
+      "heuristic": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  ],
+  "posiAddrs": [
+    {
+      "idAddr": "122BNoyhmuUt9G9mdEm3mN4nb73c1UgNKt",
+      "io": "I",
+      "idTx1": "85e72c0814597ec52d2d178b7125af0e3cfa07821912ca81bf4b1fbe4b4b70f2",
+      "idTx2": "",
+      "tagAddr": "Monedero comprometido",
+      "estado": "calculado",
+      "x1": 300,
+      "y1": 350,
+      "x2": 500,
+      "y2": 350,
+      "angulo": 180,
+      "distancia": 200,
+      "ancho": 7,
+      "color": {
+        "r": 77,
+        "g": 77,
+        "b": 77
+      },
+      "bgColor": {
+        "r": 127,
+        "g": 127,
+        "b": 127
+      },
+      "movido": false,
+      "value": 60000,
+      "esUtxo": false
+    },
+    {
+      "idAddr": "14o7zMMUJkG6De24r3JkJ6USgChq7iWF86",
+      "io": "O",
+      "idTx1": "85e72c0814597ec52d2d178b7125af0e3cfa07821912ca81bf4b1fbe4b4b70f2",
+      "idTx2": "993ced02486f9aaa5a5ed943141e05e436aac054dcea78a560f0f1860c80415a",
+      "tagAddr": "",
+      "estado": "calculado",
+      "x1": 500,
+      "y1": 350,
+      "x2": 1000,
+      "y2": 200,
+      "angulo": 16.7,
+      "distancia": 522,
+      "ancho": 7,
+      "color": {
+        "r": 77,
+        "g": 77,
+        "b": 77
+      },
+      "bgColor": {
+        "r": 127,
+        "g": 127,
+        "b": 127
+      },
+      "movido": false,
+      "value": 70000,
+      "esUtxo": false
+    },
+    {
+      "idAddr": "bc1qlw6e547whyv5phqx987tfs9u8gmqv6gs9sn2lz",
+      "io": "O",
+      "idTx1": "993ced02486f9aaa5a5ed943141e05e436aac054dcea78a560f0f1860c80415a",
+      "idTx2": "1d053e14643494a05e9a4279c42ec9f8924d52100e2e229c5e0174742d50e912",
+      "tagAddr": "Puente entre las dos",
+      "estado": "calculado",
+      "x1": 1000,
+      "y1": 200,
+      "x2": 1000,
+      "y2": 550,
+      "angulo": 90,
+      "distancia": 350,
+      "ancho": 7,
+      "color": {
+        "r": 77,
+        "g": 77,
+        "b": 77
+      },
+      "bgColor": {
+        "r": 127,
+        "g": 127,
+        "b": 127
+      },
+      "movido": true,
+      "value": 30000,
+      "esUtxo": false
+    },
+    {
+      "idAddr": "1ExDenUFY57jPrEkZjPYKjdpfRsTh1f8jJ",
+      "io": "O",
+      "idTx1": "1d053e14643494a05e9a4279c42ec9f8924d52100e2e229c5e0174742d50e912",
+      "idTx2": "",
+      "tagAddr": "",
+      "estado": "inicial",
+      "x1": 1000,
+      "y1": 550,
+      "x2": 1300,
+      "y2": 600,
+      "angulo": 9.5,
+      "distancia": 304,
+      "ancho": 7,
+      "color": {
+        "r": 77,
+        "g": 77,
+        "b": 77
+      },
+      "bgColor": {
+        "r": 127,
+        "g": 127,
+        "b": 127
+      },
+      "movido": false,
+      "value": 25000,
+      "esUtxo": true
+    }
+  ],
+  "anchoTx": 200,
+  "altoTx": 100,
+  "radioSatelites": 250,
+  "mostrarSombra": true,
+  "mostrarRayado": false
+}

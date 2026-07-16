@@ -65,6 +65,12 @@ test('el primer paso no ofrece «Atrás»: no hay dónde volver', async ({ page 
 
 test('Esc lo cierra y lo da por visto', async ({ page }) => {
   await page.goto('/');
+  // Se espera a que aparezca antes de cerrarlo. Desde la Fase 5 el tour sale
+  // después de mirar si hay un autosave que restaurar (RF-22), así que ya no
+  // está en el DOM al terminar de cargar la página: sin esta espera, el Esc
+  // llegaría antes que el tour y lo cerraría… nada.
+  await expect(page.locator('#tourBox')).toBeVisible();
+
   await page.keyboard.press('Escape');
 
   await expect(page.locator('#tourBox')).toBeHidden();

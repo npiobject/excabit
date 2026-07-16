@@ -1,18 +1,15 @@
 {
   "app.name": "excabit",
   "app.tagline": "Explorador gráfico de la cadena de Bitcoin",
-
   "search.placeholder": "Pega un txid (64 caracteres hex) y pulsa Enter",
   "search.label": "Txid o dirección a explorar",
   "search.button": "Buscar",
   "search.example": "Ejemplo",
   "search.invalid": "Introduce un txid válido de 64 caracteres hexadecimales.",
-
   "network.label": "Red",
   "network.mainnet": "mainnet",
   "network.testnet": "testnet",
   "network.signet": "signet",
-
   "action.search": "Buscar…",
   "action.expand": "Expandir",
   "action.label": "Etiquetar",
@@ -28,7 +25,7 @@
   "action.followFunds": "Seguir fondos",
   "action.cluster": "Agrupar en cluster",
   "action.grid": "Cuadrícula",
-  "action.export": "Exportar…",
+  "action.export": "Exportar PNG",
   "action.save": "Guardar investigación",
   "action.open": "Abrir investigación",
   "action.palette": "Paleta de comandos",
@@ -36,14 +33,12 @@
   "action.toggleMinimap": "Minimapa",
   "action.togglePanel": "Panel lateral",
   "action.toggleLanguage": "Idioma",
-
   "panel.details": "Detalles",
   "panel.heuristics": "Heurísticas",
   "panel.investigation": "Investigación",
   "panel.collapse": "Colapsar panel",
   "panel.expand": "Desplegar panel",
   "panel.empty": "Selecciona un nodo para ver sus detalles.",
-
   "details.status": "Estado",
   "details.confirmed": "confirmada",
   "details.unconfirmed": "sin confirmar",
@@ -64,7 +59,6 @@
   "details.address": "Dirección",
   "details.addressType": "Tipo",
   "details.graphBalance": "Saldo en el grafo",
-
   "heuristics.score": "Score de privacidad",
   "heuristics.detected": "detectada",
   "heuristics.notApplicable": "no aplica",
@@ -74,7 +68,6 @@
   "heuristics.confidence.low": "confianza baja",
   "heuristics.confidence.info": "informativa",
   "heuristics.empty": "Selecciona una transacción para analizarla.",
-
   "heuristic.change-largest-output.name": "Salida de monto mayor",
   "heuristic.change-largest-output.description": "En un pago de 1 entrada y 2 salidas del mismo tipo, si una salida es mucho mayor que la otra, la mayor suele ser el cambio que vuelve al pagador.",
   "heuristic.unnecessary-input.name": "Entrada innecesaria",
@@ -93,11 +86,9 @@
   "heuristic.tx-version-locktime.description": "La versión, el locktime y el uso de RBF son huellas del software que creó la transacción. Aquí solo se informan: no señalan cuál es el cambio.",
   "heuristic.common-input-ownership.name": "Propiedad común de entradas",
   "heuristic.common-input-ownership.description": "Para gastar varias entradas hay que firmar con todas sus claves, así que suelen ser del mismo dueño. No aplica en CoinJoin, donde varias personas firman a propósito.",
-
   "investigation.nodes": "Nodos",
   "investigation.empty": "Aún no hay nada en la investigación.",
   "investigation.labelPlaceholder": "Etiqueta…",
-
   "status.nodes": "nodos",
   "status.edges": "aristas",
   "status.provider": "mempool.space",
@@ -105,24 +96,19 @@
   "status.loading": "Cargando…",
   "status.rateLimited": "Ritmo limitado",
   "status.queued": "{count} peticiones en espera",
-
   "palette.placeholder": "Escribe una acción…",
   "palette.empty": "Sin resultados",
   "palette.hint": "↑↓ para navegar · Enter para ejecutar · Esc para cerrar",
-
   "shortcuts.title": "Atajos de teclado",
   "shortcuts.close": "Cerrar",
-
   "toast.retry": "Reintentar",
   "toast.dismiss": "Descartar",
   "error.network": "No se pudo contactar con el proveedor.",
   "error.notFound": "No se encontró esa transacción.",
   "error.rateLimited": "El proveedor pide bajar el ritmo. Reintentando…",
   "error.unexpected": "Error inesperado al cargar la transacción.",
-
   "empty.title": "Explora una transacción de Bitcoin",
   "empty.body": "Pega un txid o prueba con este ejemplo.",
-
   "tour.next": "Siguiente",
   "tour.back": "Atrás",
   "tour.skip": "Saltar",
@@ -136,5 +122,21 @@
   "tour.step.palette.title": "Todo es buscable",
   "tour.step.palette.body": "Ctrl+K abre la paleta de comandos: cualquier acción está ahí, con su atajo.",
   "tour.step.save.title": "Guarda tu investigación",
-  "tour.step.save.body": "Tus etiquetas, colores y notas se guardan en tu equipo. Aquí no hay servidores."
+  "tour.step.save.body": "Tus etiquetas, colores y notas se guardan en tu equipo. Aquí no hay servidores.",
+  "action.exportSvg": "Exportar SVG",
+  "action.exportCsv": "Exportar CSV (nodos y aristas)",
+  "persistence.saved": "Investigación guardada",
+  "persistence.opened": "Investigación abierta",
+  "persistence.exported": "Exportado: {name}",
+  "persistence.nothingToExport": "No hay nada que exportar todavía.",
+  "persistence.notJson": "Ese fichero no es un JSON válido.",
+  "persistence.unknownVersion": "Ese fichero es de una versión que esta app no conoce (schemaVersion: {found}).",
+  "persistence.invalid": "El fichero no es una investigación válida: {detail}",
+  "persistence.migrated": "Investigación de la app antigua migrada.",
+  "restore.title": "Tienes una investigación sin terminar",
+  "restore.body": "Se guardó automáticamente el {date} y tiene {count} nodos. ¿Quieres seguir donde lo dejaste?",
+  "restore.confirm": "Restaurar",
+  "restore.discard": "Empezar de cero",
+  "restore.restored": "Investigación restaurada",
+  "restore.corrupt": "El guardado automático estaba dañado y se ha descartado."
 }

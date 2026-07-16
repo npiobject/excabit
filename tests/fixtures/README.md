@@ -33,3 +33,39 @@ que alimenta `vout.spent` / `vout.spentBy`.
 
 - **Tx sin confirmar**: por definición cambia de estado; se construye con
   `txFixture({ blockHeight: null, blockTime: null })` en `tests/helpers/`.
+
+## `legacy-save.json` — el formato de la app vieja (RF-21)
+
+**Construido a mano**, no descargado: no queda ni un save real. El legacy los
+escribía con `saveJSON()` (`old/clases/bchain.js:3640`) y se hosteaban aparte
+(`exploraGraf.js:450`, comentado). Este fichero reproduce esa forma exacta y es
+lo único que valida el migrador — **editarlo cambia lo que se da por cierto del
+formato viejo**.
+
+El fichero tiene 7 claves y **ninguna dice qué formato es**: se reconoce por
+tener `posiTxs` + `posiAddrs` en la raíz.
+
+| Campo | Qué era | Qué se hace al migrar |
+|---|---|---|
+| `posiTxs[]` | Nodos de tx. **`posiTxs[0]` es la raíz** (`getCargaTx` hacía `idTx = posiTxs[0].idTx`) | → nodos `tx:`; el orden se vuelve explícito en `rootTxid` |
+| `posiAddrs[]` | **Aristas** `idTx1 → idAddr → idTx2`; la dirección no existía como entidad | → nodo `addr:` + aristas; `io` decide el sentido |
+| `tagTx` / `tagAddr` | Etiqueta del usuario (`""` = sin etiqueta) | → `label` |
+| `movido` | El usuario lo arrastró | → `pinned` |
+| `bgColor` | Relleno: **la paleta del usuario** (botones 1..6 de `grabaColorTx`) | → `color`, salvo los dos valores de estado ↓ |
+| `color` | Borde: **estado de selección** (`{255,77,77}` = seleccionado) | ✗ se descarta: no era una elección |
+| `heuristic[8]` | Heurísticas ya calculadas | ✗ se descartan: son las de BUG-006..009, incorrectas |
+| `mostrarSombra`, `mostrarRayado` | Ajustes de dibujo de p5 | ✗ se descartan (docs/05 §3) |
+| `anchoTx`, `altoTx`, `radioSatelites` | Tamaños globales del render viejo | ✗ se descartan: ahora los decide el tema |
+| `xCentro`/`yCentro`, `angulo`, `distancia`, `x1..y2` | Derivados que se cacheaban a mano | ✗ se recalculan |
+| `Multi Txs: n - total` | Nodo agregado que nunca se implementó (BUG-016) | ✗ se descarta con aviso: su id no es un txid |
+
+Trampas que el fixture cubre a propósito:
+
+- **`bgColor {232,132,32}`** en la raíz: el naranja de «tx expandida»
+  (`exploraGraf.js:693`), no un color elegido.
+- **`color {255,77,77}`** en la raíz: estaba seleccionada al guardar.
+- **`bgColor {r:256,...}`**: `grabaColorTx(1)` escribe un canal de 256
+  (`bchain.js:1561`), que no es RGB válido. Se recorta a 255.
+- **`idTx2: ""`**: satélite sin expandir. No debe generar una arista al vacío.
+- Direcciones con color de fábrica: el legacy **no tenía paleta para
+  direcciones** (`grabaColorAddr` no existe).

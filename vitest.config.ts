@@ -15,7 +15,10 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
-      include: ['src/core/**', 'src/data/**', 'src/analysis/**'],
+      // `persistence/` entra en el gate desde la Fase 5: es dominio puro (no
+      // toca DOM ni Cytoscape, docs/05 §2) y guarda el trabajo del usuario —
+      // un fallo aquí no se ve hasta que alguien no puede abrir su fichero.
+      include: ['src/core/**', 'src/data/**', 'src/analysis/**', 'src/persistence/**'],
       // Gates del roadmap (docs/07 §1): core/+data/ ≥ 90 %, analysis/ ≥ 95 %.
       // analysis/ va más alto porque ahí vivían los bugs silenciosos del
       // legacy: las heurísticas dieron resultados incorrectos durante años

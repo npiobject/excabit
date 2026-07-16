@@ -18,7 +18,11 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, testIgnore: /performance\.spec\.ts/ },
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+      testIgnore: /performance\.spec\.ts/,
+    },
     {
       // RNF-01 se mide aparte y al final: compartiendo CPU con 5 workers, la
       // cifra mide el paralelismo de Playwright, no la app. `dependencies`

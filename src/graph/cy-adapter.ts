@@ -18,7 +18,7 @@ import cytoscape, { type Core, type ElementDefinition, type NodeSingular } from 
 import type { Graph, GraphEdge, GraphNode } from '@/core/graph-model';
 import type { NormalizedTx } from '@/core/types';
 import { formatBtc, shortHash } from '@/i18n/format';
-import { graphStylesheet } from './styles';
+import { graphStylesheet, TOKENS } from './styles';
 
 export interface CyAdapterOptions {
   container?: HTMLElement;
@@ -295,6 +295,28 @@ export class CyAdapter {
       });
       this.cy.center();
     }
+  }
+
+  /**
+   * PNG del grafo (RF-23). Data URL.
+   *
+   * El único export que vive aquí y no en `persistence/`: un PNG es una foto de
+   * **lo que se ve**, y quién sabe qué se ve es el motor. El CSV y el SVG salen
+   * de los datos y no necesitan pedirle permiso a nadie.
+   *
+   * `full: true` = el grafo entero aunque no quepa en pantalla; `false` = solo
+   * lo que hay a la vista. Las dos cosas de RF-23, y la que se espera al pulsar
+   * «exportar» es la primera: se exporta la investigación, no la ventana.
+   *
+   * `scale: 2` porque estas imágenes acaban en un informe o en una pantalla
+   * grande, y un PNG a 1× de un grafo con texto pequeño se lee mal.
+   */
+  toPng(options: { full?: boolean; scale?: number } = {}): string {
+    return this.cy.png({
+      full: options.full ?? true,
+      scale: options.scale ?? 2,
+      bg: TOKENS.bg,
+    });
   }
 
   destroy(): void {

@@ -783,16 +783,37 @@ dl {
   font-size: 11px;
 }
 
-/* ---------- TOUR (RF-32) ---------- */
+/* ---------- TOUR (RF-32) y diálogo de restaurar (RF-22) ---------- */
 
-#tourBox {
+/* Mismo aspecto: son la misma clase de interrupción. Cambia dónde se plantan. */
+#tourBox,
+#restoreBox {
   width: min(380px, 92vw);
-  margin: auto auto 14vh;
   padding: 16px;
   background: var(--surface);
   border: 1px solid var(--accent-dim);
   border-radius: var(--radius);
   box-shadow: 0 16px 48px rgba(1, 4, 9, 0.5);
+}
+
+/* El tour va abajo: está señalando la app y no puede taparla. */
+#tourBox {
+  margin: auto auto 14vh;
+}
+
+/* El de restaurar, centrado: no señala nada, hay que decidirlo antes de seguir. */
+#restoreBox {
+  margin: auto;
+}
+#restoreBox h2 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+#restoreBox p {
+  margin: 0 0 14px;
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1.5;
 }
 #tourBox h2 {
   margin: 0 0 6px;

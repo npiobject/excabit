@@ -1,18 +1,15 @@
 {
   "app.name": "excabit",
   "app.tagline": "Graph explorer for the Bitcoin chain",
-
   "search.placeholder": "Paste a txid (64 hex characters) and press Enter",
   "search.label": "Txid or address to explore",
   "search.button": "Search",
   "search.example": "Example",
   "search.invalid": "Enter a valid 64-character hexadecimal txid.",
-
   "network.label": "Network",
   "network.mainnet": "mainnet",
   "network.testnet": "testnet",
   "network.signet": "signet",
-
   "action.search": "Search…",
   "action.expand": "Expand",
   "action.label": "Label",
@@ -28,7 +25,7 @@
   "action.followFunds": "Follow funds",
   "action.cluster": "Group into cluster",
   "action.grid": "Grid",
-  "action.export": "Export…",
+  "action.export": "Export PNG",
   "action.save": "Save investigation",
   "action.open": "Open investigation",
   "action.palette": "Command palette",
@@ -36,14 +33,12 @@
   "action.toggleMinimap": "Minimap",
   "action.togglePanel": "Side panel",
   "action.toggleLanguage": "Language",
-
   "panel.details": "Details",
   "panel.heuristics": "Heuristics",
   "panel.investigation": "Investigation",
   "panel.collapse": "Collapse panel",
   "panel.expand": "Expand panel",
   "panel.empty": "Select a node to see its details.",
-
   "details.status": "Status",
   "details.confirmed": "confirmed",
   "details.unconfirmed": "unconfirmed",
@@ -64,7 +59,6 @@
   "details.address": "Address",
   "details.addressType": "Type",
   "details.graphBalance": "Balance in graph",
-
   "heuristics.score": "Privacy score",
   "heuristics.detected": "detected",
   "heuristics.notApplicable": "not applicable",
@@ -74,7 +68,6 @@
   "heuristics.confidence.low": "low confidence",
   "heuristics.confidence.info": "informational",
   "heuristics.empty": "Select a transaction to analyse it.",
-
   "heuristic.change-largest-output.name": "Largest output as change",
   "heuristic.change-largest-output.description": "In a 1-input, 2-output payment with matching address types, if one output is much larger than the other, the larger one is usually the change returning to the payer.",
   "heuristic.unnecessary-input.name": "Unnecessary input",
@@ -93,11 +86,9 @@
   "heuristic.tx-version-locktime.description": "Version, locktime and RBF usage are fingerprints of the software that built the transaction. They are only reported here: they do not point at the change.",
   "heuristic.common-input-ownership.name": "Common input ownership",
   "heuristic.common-input-ownership.description": "Spending several inputs requires signing with all their keys, so they usually share an owner. It does not apply to CoinJoins, where several people sign on purpose.",
-
   "investigation.nodes": "Nodes",
   "investigation.empty": "Nothing in the investigation yet.",
   "investigation.labelPlaceholder": "Label…",
-
   "status.nodes": "nodes",
   "status.edges": "edges",
   "status.provider": "mempool.space",
@@ -105,24 +96,19 @@
   "status.loading": "Loading…",
   "status.rateLimited": "Rate limited",
   "status.queued": "{count} requests queued",
-
   "palette.placeholder": "Type an action…",
   "palette.empty": "No results",
   "palette.hint": "↑↓ to navigate · Enter to run · Esc to close",
-
   "shortcuts.title": "Keyboard shortcuts",
   "shortcuts.close": "Close",
-
   "toast.retry": "Retry",
   "toast.dismiss": "Dismiss",
   "error.network": "Could not reach the provider.",
   "error.notFound": "That transaction was not found.",
   "error.rateLimited": "The provider is asking us to slow down. Retrying…",
   "error.unexpected": "Unexpected error loading the transaction.",
-
   "empty.title": "Explore a Bitcoin transaction",
   "empty.body": "Paste a txid or try this example.",
-
   "tour.next": "Next",
   "tour.back": "Back",
   "tour.skip": "Skip",
@@ -136,5 +122,21 @@
   "tour.step.palette.title": "Everything is searchable",
   "tour.step.palette.body": "Ctrl+K opens the command palette: every action is there, with its shortcut.",
   "tour.step.save.title": "Save your investigation",
-  "tour.step.save.body": "Your labels, colours and notes are saved on your own machine. There are no servers here."
+  "tour.step.save.body": "Your labels, colours and notes are saved on your own machine. There are no servers here.",
+  "action.exportSvg": "Export SVG",
+  "action.exportCsv": "Export CSV (nodes and edges)",
+  "persistence.saved": "Investigation saved",
+  "persistence.opened": "Investigation opened",
+  "persistence.exported": "Exported: {name}",
+  "persistence.nothingToExport": "There is nothing to export yet.",
+  "persistence.notJson": "That file is not valid JSON.",
+  "persistence.unknownVersion": "That file comes from a version this app does not know (schemaVersion: {found}).",
+  "persistence.invalid": "That file is not a valid investigation: {detail}",
+  "persistence.migrated": "Investigation migrated from the old app.",
+  "restore.title": "You have an unfinished investigation",
+  "restore.body": "It was saved automatically on {date} and has {count} nodes. Do you want to pick up where you left off?",
+  "restore.confirm": "Restore",
+  "restore.discard": "Start fresh",
+  "restore.restored": "Investigation restored",
+  "restore.corrupt": "The autosave was damaged and has been discarded."
 }

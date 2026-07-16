@@ -286,6 +286,96 @@ rectángulo invisible y pasaría siempre.
 - `.excabit.json` v2 + migrador del formato legacy, autosave IndexedDB, export PNG/SVG/CSV.
 - **Salida**: round-trip save→load deep-equal; una investigación guardada con la app vieja se abre en la nueva; regresión BUG-019 en verde.
 
+### Resultado (cerrada el 2026-07-16)
+
+| Criterio de salida | Resultado |
+|---|---|
+| Round-trip save→load deep-equal | ✅ incluidos los bigint (como texto) y un importe mayor que `MAX_SAFE_INTEGER` |
+| Una investigación de la app vieja se abre en la nueva | ✅ E2E: `Ctrl+O` con `legacy-save.json` → etiquetas, colores y posiciones, con 5 avisos de lo descartado |
+| Regresión BUG-019 | ✅ 14 casos: JSON arbitrario, campos que faltan, tipos cambiados, aristas colgando, `schemaVersion` desconocida |
+
+460 tests unit + 80 E2E. Cobertura de `persistence/`: 96,9 % sentencias · 90,9 % ramas.
+**`persistence/` entra en el gate de cobertura** (`vitest.config.ts`): es dominio
+puro y guarda el trabajo del usuario — un fallo ahí no se ve hasta que alguien no
+puede abrir su fichero.
+
+Decisiones tomadas al implementar:
+
+- **El fichero es autocontenido**: lleva las txs enteras, no solo sus ids. Ocupa
+  más, pero abrir una investigación de hace un año no puede depender de que
+  mempool.space siga en pie. La lección es de este proyecto: el legacy publicado
+  quedó inservible el día que caducó su clave (docs/08, Fase 0). Una investigación
+  guardada es un documento, no un puntero. Esto se aparta del extracto de
+  docs/05 §3, que no incluía `tx` en los nodos.
+- **Cargar devuelve un resultado, no lanza** (`LoadResult`). BUG-019 no era que
+  el legacy no validara: era que fallaba *después*, en un `draw()` cualquiera.
+  Un tipo que hay que mirar no se puede ignorar sin querer.
+- **El autosave guarda el mismo formato que el fichero**: un solo serializador,
+  un solo validador, un solo camino que probar. Con dos, «restaurar ≡ round-trip»
+  sería una coincidencia que mantener a mano.
+- **La selección no se guarda**: es del momento. Restaurar lo que estaba marcado
+  al cerrar sería restaurar un accidente.
+- **Restaurar es un diálogo, no un toast**: un toast se ignora, y mientras sigue
+  en pantalla el autosave de la sesión nueva ya está pisando el que ofrecía
+  restaurar. El aviso habría sido más amable que perder el trabajo que anunciaba.
+- **Abrir un fichero vacía el historial**: cerrar un documento y abrir otro no es
+  editarlo. Un Ctrl+Z que devolviera al grafo anterior mezclaría dos
+  investigaciones en una pila.
+- **Dos CSV, no uno** (nodos y aristas, con cabeceras `Id`/`Label` y
+  `Source`/`Target`): es lo que Gephi importa sin tocar nada (RF-24).
+- **El SVG se genera de los datos**, no del lienzo: sale limpio y editable, y de
+  paso respeta la frontera (`persistence/` no conoce Cytoscape). El PNG es la
+  excepción —es una foto de lo que se ve— y vive en `graph/cy-adapter.ts`.
+- **El tema del SVG se inyecta**: copiar los cinco colores en `persistence/`
+  sería peor que la regla de fronteras — el día que cambiara un token, el SVG
+  seguiría con los colores viejos y nadie se enteraría.
+- **Inyección de fórmulas en el CSV**: una etiqueta que empieza por `= + - @` se
+  neutraliza con un apóstrofo. Las etiquetas las escribe una persona y las
+  investigaciones se comparten: `=HYPERLINK(...)` en el nombre de un nodo se
+  ejecuta al abrir el CSV en Excel. No estaba en las specs.
+- **zod** (dependencia nueva, la 2ª de producción): docs/05 §3 lo pedía por
+  nombre para corregir BUG-019.
+
+**Corrección a docs/05 §3 y al informe del formato legacy — los dos colores del
+legacy son estado, no anotaciones.** El migrador empezó copiando `color` a la v2
+y salía mal: `color` es el **borde**, y vale `{255,77,77}` cuando el nodo está
+*seleccionado* (`exploraGraf.js:790`). Migrarlo convertía en anotación permanente
+lo que estuviera marcado al pulsar «guardar». El color del usuario es `bgColor`
+(la paleta de 7 botones de `grabaColorTx`, `bchain.js:1556`), y de ahí hay que
+excluir dos valores más: `{232,132,32}` es el naranja de «tx expandida»
+(`exploraGraf.js:693`) y `{127,127,127}` es el botón 7 = «quitar color». Las
+direcciones no tenían paleta (`grabaColorAddr` no existe): su color nunca se
+migra. **Lo cazó abrir la app y mirar los colores**, no los 33 tests del migrador
+—que pasaban todos, contra un fixture que yo mismo había construido con la
+semántica equivocada—. Un fixture inventado prueba lo que creías, no lo que hay.
+
+Otros hallazgos del migrador:
+
+- **El legacy no guardaba las txs**, solo `numVin`/`numVout`/`value`/`fees`. No se
+  puede reconstruir una `NormalizedTx` con eso y no se inventa: los nodos migrados
+  vienen sin `tx` y se rellenan desde la red, con aviso. Lo irrecuperable eran las
+  anotaciones, y esas sí viajan.
+- **Las heurísticas guardadas se descartan**, no se migran: son las que
+  BUG-006..009 demostraron incorrectas. Migrarlas conservaría el bug con aspecto
+  de dato.
+- **El legacy no tenía campo de versión** — el `type == "application"` que
+  comprobaba `getCargaTx` era el MIME que p5 colgaba del objeto `File`, no algo
+  del fichero. Comprobar el envoltorio en vez del contenido es media causa de
+  BUG-019. Se reconoce por su forma (`posiTxs` + `posiAddrs`), y por eso v2 lleva
+  `schemaVersion` desde el primer día.
+- **`{r:256}`**: `grabaColorTx(1)` escribe un canal de 256 (`bchain.js:1561`), que
+  no es RGB válido; p5 lo recortaba. El migrador también, o el hex saldría de 7
+  dígitos.
+- **No había ni un save real en el repo** para usar de fixture (se hosteaban
+  aparte, `exploraGraf.js:450`): `tests/fixtures/legacy-save.json` está construido
+  a mano desde `saveJSON` (`bchain.js:3640`).
+
+**Regresión introducida y corregida**: el tour (RF-32) ahora aparece después de
+consultar el autosave, así que ya no está en el DOM al terminar de cargar. Un E2E
+que pulsaba Esc nada más cargar asumía la sincronía de antes y se volvió flaky.
+Mismo patrón en dos tests nuevos que pulsaban `Ctrl+O` antes de que el JS
+registrara los atajos: `goto` resuelve con el HTML, no con la app viva.
+
 ## Fase 6 — Funcionalidades diferenciales (iterativa, una release por feature)
 
 Orden propuesto por valor/esfuerzo:

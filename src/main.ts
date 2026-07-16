@@ -19,6 +19,12 @@ import { ShortcutsOverlay } from './ui/shortcuts-overlay';
 import { Toasts } from './ui/toasts';
 import { Tour } from './ui/tour';
 import { Minimap } from './graph/minimap';
+import { TOKENS } from './graph/styles';
+import { loadInvestigation, saveInvestigation } from './persistence/investigation';
+import { Autosave } from './persistence/autosave';
+import { toEdgesCsv, toNodesCsv, toSvg } from './persistence/export';
+import { downloadDataUrl, downloadText, pickTextFile, timestampedName } from './ui/file-io';
+import { askRestore } from './ui/restore-prompt';
 import './ui/theme.css';
 
 const EXAMPLE_TXID = '85e72c0814597ec52d2d178b7125af0e3cfa07821912ca81bf4b1fbe4b4b70f2';
@@ -43,6 +49,12 @@ declare global {
      * de lo que dependen los 60 fps de RNF-01.
      */
     excabitMinimap?: Minimap;
+    /**
+     * El autosave (RF-22). Expuesto por lo mismo que los anteriores: comprobar
+     * que «al volver se ofrece restaurar» exige saber que algo se guardó, y eso
+     * no se ve desde fuera hasta que ya has recargado.
+     */
+    excabitAutosave?: Autosave;
   }
 }
 
@@ -72,7 +84,12 @@ function boot(): void {
 
   const toasts = new Toasts(requireElement('toasts'));
   const panel = new SidePanel(panelRoot);
-  const palette = new Palette({ container: requireElement('overlays'), onAction: (id) => { run(id); } });
+  const palette = new Palette({
+    container: requireElement('overlays'),
+    onAction: (id) => {
+      run(id);
+    },
+  });
   const shortcutsOverlay = new ShortcutsOverlay(requireElement('overlays'));
   const tour = new Tour(requireElement('overlays'));
 
@@ -141,6 +158,24 @@ function boot(): void {
   app.store.subscribe(refresh);
   app.adapter.cy.on('zoom', () => {
     statusZoom.textContent = `${t('status.zoom')} ${String(Math.round(app.adapter.cy.zoom() * 100))}%`;
+  });
+
+  /* ---------- Autosave (RF-22) ---------- */
+
+  const autosave = new Autosave();
+  window.excabitAutosave = autosave;
+
+  app.store.subscribe(() => {
+    // Un grafo vacío no se guarda: sobrescribiría el autosave anterior con la
+    // nada justo cuando el usuario todavía no ha decidido si restaurarlo.
+    if (isEmpty()) return;
+
+    autosave.schedule(app.store.getState(), metaNow());
+  });
+
+  // Cerrar la pestaña no puede costar los últimos cambios por 800 ms de debounce.
+  window.addEventListener('beforeunload', () => {
+    void autosave.flush();
   });
 
   /* ---------- Acciones: un único despachador (RF-26) ---------- */
@@ -216,17 +251,143 @@ function boot(): void {
       case 'toggleLanguage':
         switchLanguage();
         break;
-      // Fase 5 y 6: persistencia, export, taint y clustering. Se declaran en el
-      // registro para que aparezcan en la palette con su atajo desde ya, pero
-      // avisan en vez de fingir que funcionan.
       case 'save':
+        saveToFile();
+        break;
       case 'open':
+        void openFromFile();
+        break;
       case 'export':
+        exportPng();
+        break;
+      case 'exportSvg':
+        exportSvg();
+        break;
+      case 'exportCsv':
+        exportCsv();
+        break;
+      // Fase 6: taint y clustering. Se declaran en el registro para que
+      // aparezcan en la palette con su atajo desde ya, pero avisan en vez de
+      // fingir que funcionan.
       case 'followFunds':
       case 'cluster':
-        toasts.show({ message: `${t(actionName(id))} — Fase 5/6`, timeout: 2500 });
+        toasts.show({ message: `${t(actionName(id))} — Fase 6`, timeout: 2500 });
         break;
     }
+  }
+
+  /* ---------- Persistencia y export (RF-21/22/23/24) ---------- */
+
+  const metaNow = () => ({
+    network,
+    ...(app.root === undefined ? {} : { rootTxid: app.root }),
+    viewport: {
+      zoom: app.adapter.cy.zoom(),
+      panX: app.adapter.cy.pan().x,
+      panY: app.adapter.cy.pan().y,
+    },
+  });
+
+  const isEmpty = (): boolean => Object.keys(app.store.getState().graph.nodes).length === 0;
+
+  /** Un export vacío es un fichero que decepciona al abrirlo. */
+  function requireGraph(): boolean {
+    if (!isEmpty()) return true;
+
+    toasts.show({ message: t('persistence.nothingToExport'), timeout: 3000 });
+
+    return false;
+  }
+
+  function saveToFile(): void {
+    if (!requireGraph()) return;
+
+    downloadText(
+      timestampedName('excabit', 'excabit.json'),
+      'application/json',
+      saveInvestigation(app.store.getState(), metaNow()),
+    );
+    toasts.show({ message: t('persistence.saved'), timeout: 2500 });
+  }
+
+  async function openFromFile(): Promise<void> {
+    const file = await pickTextFile('.json,.excabit.json,application/json');
+    if (file === null) return;
+
+    const result = loadInvestigation(file.text);
+    if (!result.ok) {
+      toasts.show({ message: describeLoadError(result.error), timeout: 8000 });
+      return;
+    }
+
+    app.restore(result.investigation.state, result.investigation.rootTxid);
+
+    const viewport = result.investigation.viewport;
+    if (viewport === undefined) app.adapter.fit();
+    else {
+      app.adapter.cy.zoom(viewport.zoom);
+      app.adapter.cy.pan({ x: viewport.panX, y: viewport.panY });
+    }
+
+    toasts.show({ message: t('persistence.opened'), timeout: 2500 });
+    // Los avisos del migrador se enseñan de uno en uno: un toast con cinco
+    // frases no lo lee nadie.
+    for (const warning of result.warnings) toasts.show({ message: warning, timeout: 10_000 });
+  }
+
+  function describeLoadError(
+    error: ReturnType<typeof loadInvestigation> extends { ok: true }
+      ? never
+      : { kind: string; found?: unknown; issues?: string[] },
+  ): string {
+    switch (error.kind) {
+      case 'not-json':
+        return t('persistence.notJson');
+      case 'unknown-schema-version':
+        return t('persistence.unknownVersion', { found: String(error.found) });
+      default:
+        // Solo el primer problema: la lista entera abruma y con arreglar el
+        // primero suele caer el resto.
+        return t('persistence.invalid', { detail: error.issues?.[0] ?? '' });
+    }
+  }
+
+  function exportPng(): void {
+    if (!requireGraph()) return;
+
+    const name = timestampedName('excabit', 'png');
+    downloadDataUrl(name, app.adapter.toPng());
+    toasts.show({ message: t('persistence.exported', { name }), timeout: 2500 });
+  }
+
+  function exportSvg(): void {
+    if (!requireGraph()) return;
+
+    const name = timestampedName('excabit', 'svg');
+    // El tema se inyecta: `persistence/` no conoce `graph/styles` (docs/05 §2).
+    downloadText(
+      name,
+      'image/svg+xml',
+      toSvg(app.store.getState().graph, {
+        background: TOKENS.bg,
+        edge: TOKENS.border,
+        text: TOKENS.text,
+        tx: TOKENS.surface2,
+        address: TOKENS.utxo,
+      }),
+    );
+    toasts.show({ message: t('persistence.exported', { name }), timeout: 2500 });
+  }
+
+  function exportCsv(): void {
+    if (!requireGraph()) return;
+
+    // Dos ficheros y no uno: Gephi importa nodos y aristas por separado, y
+    // meterlos en el mismo CSV obligaría a partirlo a mano (RF-24).
+    const graph = app.store.getState().graph;
+    downloadText(timestampedName('excabit-nodos', 'csv'), 'text/csv', toNodesCsv(graph));
+    downloadText(timestampedName('excabit-aristas', 'csv'), 'text/csv', toEdgesCsv(graph));
+    toasts.show({ message: t('persistence.exported', { name: 'CSV' }), timeout: 2500 });
   }
 
   /* ---------- Teclado: un único punto de decisión (BUG-017) ---------- */
@@ -319,7 +480,56 @@ function boot(): void {
 
   refresh();
   statusZoom.textContent = `${t('status.zoom')} 100%`;
-  tour.startIfFirstRun();
+  void offerRestore();
+
+  /**
+   * Al arrancar, si quedó algo a medias, se ofrece seguir (RF-22).
+   *
+   * Va antes que el tour y lo sustituye si aparece: quien tiene una
+   * investigación sin terminar no es un usuario nuevo, y encadenarle cinco pasos
+   * de bienvenida delante de su trabajo sería una broma pesada.
+   */
+  async function offerRestore(): Promise<void> {
+    const snapshot = await autosave.read().catch(() => null);
+
+    if (snapshot === null || snapshot.nodeCount === 0) {
+      tour.startIfFirstRun();
+      return;
+    }
+
+    const wants = await askRestore(requireElement('overlays'), {
+      updatedAt: snapshot.updatedAt,
+      nodeCount: snapshot.nodeCount,
+    });
+
+    if (!wants) {
+      // Descartar es descartar: si se quedara ahí, volveríamos a preguntar en la
+      // siguiente carga por algo que el usuario ya dijo que no quería.
+      await autosave.clear().catch(() => undefined);
+      tour.startIfFirstRun();
+      return;
+    }
+
+    const result = await autosave.restore();
+    if (result === null || !result.ok) {
+      // Un autosave a medio escribir por un cierre brusco no puede secuestrar el
+      // arranque: se avisa, se tira y la app sigue.
+      await autosave.clear().catch(() => undefined);
+      toasts.show({ message: t('restore.corrupt'), timeout: 6000 });
+      return;
+    }
+
+    app.restore(result.investigation.state, result.investigation.rootTxid);
+
+    const viewport = result.investigation.viewport;
+    if (viewport === undefined) app.adapter.fit();
+    else {
+      app.adapter.cy.zoom(viewport.zoom);
+      app.adapter.cy.pan({ x: viewport.panX, y: viewport.panY });
+    }
+
+    toasts.show({ message: t('restore.restored'), timeout: 2500 });
+  }
 }
 
 /** Paleta de colores del mock, en ciclo (RF-11). */
