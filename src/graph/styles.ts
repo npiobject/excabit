@@ -37,6 +37,15 @@ export const TOKENS = {
   warn: '#d29922',
   ok: '#3fb950',
   bad: '#f85149',
+  /**
+   * Violeta: rastro de fondos (RF-18).
+   *
+   * Un color que no significa nada más en este grafo. El naranja ya es la tx
+   * raíz, el verde las entradas, el rojo las salidas y el azul los UTXO: reusar
+   * cualquiera obligaría a mirar dos veces para saber si un nodo está marcado o
+   * es que resulta que era la raíz.
+   */
+  taint: '#bc8cff',
 } as const;
 
 const FONT_MONO = "'JetBrains Mono', 'Cascadia Code', Consolas, monospace";
@@ -186,5 +195,34 @@ export function graphStylesheet(): StylesheetStyle[] {
       },
     },
     { selector: 'edge:selected', style: { 'line-color': TOKENS.accent, width: 2.5 } },
+
+    /* ---------- Rastro de fondos (RF-18) ---------- */
+
+    /*
+     * Resaltar un camino es, sobre todo, apagar lo que no lo es. Un 0,18 de
+     * opacidad deja el resto del grafo como contexto —se ve dónde está el rastro
+     * dentro de la investigación— sin competir por la atención.
+     */
+    { selector: '.dimmed', style: { opacity: 0.18 } },
+    {
+      selector: 'node.tainted',
+      style: {
+        'border-color': TOKENS.taint,
+        // El grosor del borde lleva la fracción marcada: un nodo por el que pasó
+        // todo el dinero se ve más que uno que recibió un 5 % tras una mezcla.
+        // Es el mismo dato que el color, dicho de una forma que se lee de lejos.
+        'border-width': `mapData(taint, 0, 1, 2, 6)`,
+        'border-opacity': 1,
+      },
+    },
+    {
+      selector: 'edge.tainted',
+      style: {
+        'line-color': TOKENS.taint,
+        'target-arrow-color': TOKENS.taint,
+        width: 3,
+        'line-style': 'solid',
+      },
+    },
   ];
 }

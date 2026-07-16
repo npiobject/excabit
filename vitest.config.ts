@@ -18,7 +18,18 @@ export default defineConfig({
       // `persistence/` entra en el gate desde la Fase 5: es dominio puro (no
       // toca DOM ni Cytoscape, docs/05 §2) y guarda el trabajo del usuario —
       // un fallo aquí no se ve hasta que alguien no puede abrir su fichero.
-      include: ['src/core/**', 'src/data/**', 'src/analysis/**', 'src/persistence/**'],
+      include: [
+        'src/core/**',
+        'src/data/**',
+        'src/analysis/**',
+        'src/persistence/**',
+        // `format.ts` y no `i18n/**`: el resto del módulo escribe en el DOM y se
+        // prueba en los E2E. Este entra porque es aritmética pura y porque no
+        // tenerlo aquí salió caro — formatea todos los importes de la app y se
+        // pasó un año dando `1.234.567.89012345 BTC` en español sin un solo test
+        // que lo mirase.
+        'src/i18n/format.ts',
+      ],
       // Gates del roadmap (docs/07 §1): core/+data/ ≥ 90 %, analysis/ ≥ 95 %.
       // analysis/ va más alto porque ahí vivían los bugs silenciosos del
       // legacy: las heurísticas dieron resultados incorrectos durante años

@@ -298,6 +298,56 @@ export class CyAdapter {
   }
 
   /**
+   * Resalta el rastro de unos fondos (RF-18).
+   *
+   * Recibe `id → fracción marcada (0..1)`, no el resultado del análisis: `graph/`
+   * no conoce `analysis/` (docs/05 §2) y, sobre todo, el grafo no tiene por qué
+   * saber qué es un haircut — solo qué pintar más fuerte. Mismo trato que el
+   * score.
+   *
+   * `null` quita el resaltado.
+   */
+  highlightTaint(marks: ReadonlyMap<string, number> | null): void {
+    this.syncing = true;
+
+    try {
+      if (marks === null) {
+        this.cy.elements().removeClass('tainted dimmed');
+        this.cy.nodes().removeData('taint');
+
+        return;
+      }
+
+      this.cy.nodes().forEach((node) => {
+        const ratio = marks.get(node.id());
+
+        if (ratio === undefined) {
+          node.removeData('taint');
+          node.removeClass('tainted');
+          // Lo que no está en el rastro se apaga: resaltar un camino es, sobre
+          // todo, quitar de en medio lo que no lo es.
+          node.addClass('dimmed');
+
+          return;
+        }
+
+        node.data('taint', ratio);
+        node.removeClass('dimmed');
+        node.addClass('tainted');
+      });
+
+      // Una arista pertenece al rastro si une dos nodos del rastro.
+      this.cy.edges().forEach((edge) => {
+        const inTrace = marks.has(edge.source().id()) && marks.has(edge.target().id());
+        edge.toggleClass('tainted', inTrace);
+        edge.toggleClass('dimmed', !inTrace);
+      });
+    } finally {
+      this.syncing = false;
+    }
+  }
+
+  /**
    * PNG del grafo (RF-23). Data URL.
    *
    * El único export que vive aquí y no en `persistence/`: un PNG es una foto de

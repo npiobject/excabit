@@ -138,5 +138,11 @@
   "restore.confirm": "Restore",
   "restore.discard": "Start fresh",
   "restore.restored": "Investigation restored",
-  "restore.corrupt": "The autosave was damaged and has been discarded."
+  "restore.corrupt": "The autosave was damaged and has been discarded.",
+  "taint.summary": "Trail: {nodes} · {amount} in {hops}",
+  "taint.nowhere": "That node leads nowhere: its funds are not spent anywhere in this graph. Expand to follow the trail.",
+  "taint.nodes.one": "{count} node",
+  "taint.nodes.other": "{count} nodes",
+  "taint.hops.one": "{count} hop",
+  "taint.hops.other": "{count} hops"
 }

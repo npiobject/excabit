@@ -379,7 +379,7 @@ registrara los atajos: `goto` resuelve con el HTML, no con la app viva.
 ## Fase 6 — Funcionalidades diferenciales (iterativa, una release por feature)
 
 Orden propuesto por valor/esfuerzo:
-1. Seguimiento de flujo de fondos (RF-18).
+1. Seguimiento de flujo de fondos (RF-18). ✅ **entregada el 2026-07-16** (ver abajo)
 2. Clustering de direcciones (RF-19).
 3. Expansión inteligente paginada (RF-31).
 4. Línea temporal (P2) y multi-red (RF-04).
@@ -388,6 +388,66 @@ Orden propuesto por valor/esfuerzo:
 
 - **Salida de la 6.1 en adelante**: cada feature con su fila de la matriz de tests completa.
 - **Cierre**: deploy en GitHub Pages sustituyendo al legacy; `old/` queda como archivo histórico; README nuevo.
+
+### 6.1 — Seguimiento de flujo de fondos (RF-18), entregada el 2026-07-16
+
+30 tests unit + 7 E2E. Cobertura `analysis/`: 100 % sentencias · 98,1 % ramas.
+
+**Decisión de fondo: haircut, no poison.** La spec pedía «suma acumulada» sin
+decir qué pasa cuando una tx mezcla dinero marcado con dinero limpio. Se propaga
+**en proporción**: 1 BTC marcado de 4 totales → cada salida al 25 %. La
+alternativa (poison: lo que toca queda marcado al 100 %) es más fácil de escribir
+y miente más — a los dos o tres saltos tiñe medio grafo. Con haircut, un CoinJoin
+5×5 diluye el rastro al 20 %, que es lo que hace en la realidad y lo que esta app
+quiere enseñar (docs/00 §3). Consultado y aprobado antes de escribir código.
+
+Decisiones tomadas al implementar:
+
+- **El reparto es sobre lo que SALE, no sobre lo que entra**: la diferencia es la
+  comisión, y prorratear sobre las entradas evaporaría un poco del rastro en cada
+  salto por un motivo que no tiene que ver con la privacidad. Cuando el marcado
+  que entra supera todo lo que sale (justamente por el fee), se acota: una arista
+  nunca lleva más marcado que su valor. Lo que sobra se lo llevó el minero.
+- **No es un recorrido, es una worklist.** Dos motivos, los dos reales: en un
+  diamante los caminos se reencuentran y hay que **sumar** (un BFS con «visitados»
+  contaría uno), y una dirección reutilizada (H-07) crea **ciclos** de verdad. Un
+  nodo se reencola solo si su marcado crece; como está acotado por el valor de las
+  aristas, converge.
+- **Un salto es una transacción**, no una arista: pasar por una dirección es el
+  mismo dinero esperando a ser gastado.
+- **El rastro no toca el modelo**: es una forma de mirar, no una edición. No entra
+  en el historial y no hay nada que deshacer. La misma tecla lo quita.
+- **Resaltar es apagar**: los nodos fuera del rastro bajan al 18 % de opacidad. El
+  grosor del borde lleva la fracción marcada — el mismo dato que el color, dicho
+  de una forma que se lee de lejos.
+- **Violeta y no naranja**: el naranja ya es la tx raíz, el verde las entradas, el
+  rojo las salidas y el azul los UTXO. Reusar cualquiera obligaría a mirar dos
+  veces para saber si un nodo está marcado o es que era la raíz.
+- **El código muerto se borra, no se cubre con tests.** Al perseguir el umbral de
+  ramas de `analysis/` (95 %) aparecieron guardas que no se podían ejecutar: un
+  nodo solo entra en la cola si ya tiene marcado y si cabe en `maxHops`, así que
+  las comprobaciones de dentro del bucle sobraban. Quitándolas, `taint.ts` pasó de
+  88,4 % a 97,6 % de ramas. La cobertura baja no siempre pide más tests; a veces
+  señala código que no hace falta.
+
+**Bug preexistente encontrado y corregido — `formatBtc` daba importes ambiguos en
+español.** El status del rastro mostraba `0.00240000 BTC` con la app en español.
+`formatBtc` agrupaba los miles con el idioma pero ponía el decimal con un punto
+fijo, así que un importe grande salía `1.234.567.89012345 BTC`: el mismo signo
+como separador de miles y de decimales, y no se sabe dónde acaba el entero. En
+una herramienta que sirve para decir cuánto dinero se movió, eso no es estilo.
+
+- **`i18n/format.ts` no tenía ni un test** y estaba fuera del gate de cobertura,
+  pese a formatear todos los importes de la app. Ahora tiene 17 y entra en el
+  gate. Que `formatFeerate` —en el mismo fichero— ya tradujera el separador
+  confirma que fue un olvido, no una decisión.
+- El separador lo decide `Intl`, no una tabla nuestra.
+
+**`tPlural` (nuevo, RF-30)**: el resumen decía «1 saltos». Se resuelve con
+`Intl.PluralRules` en vez de un `count === 1`, por lo mismo que el separador
+decimal: la regla la sabe la plataforma. Las claves se pasan enteras
+(`taint.hops.one`, `taint.hops.other`) y no componiendo `${base}.one`, para que
+sigan siendo `MessageKey` y el test que caza claves que faltan en los json las vea.
 
 ## Riesgos y mitigaciones
 

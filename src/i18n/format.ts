@@ -10,24 +10,38 @@ import { getLocale } from './i18n';
 
 const SATS_PER_BTC = 100_000_000n;
 
+const localeTag = (): string => (getLocale() === 'es' ? 'es-ES' : 'en-US');
+
+/** `,` en español, `.` en inglés. Lo dice el propio Intl, no una tabla nuestra. */
+const decimalSeparator = (): string =>
+  new Intl.NumberFormat(localeTag()).formatToParts(1.1).find((part) => part.type === 'decimal')
+    ?.value ?? '.';
+
 /**
  * Satoshis → BTC con 8 decimales.
  *
  * Se divide en `bigint` y se compone la cadena a mano: pasar por `Number`
  * reintroduciría el error de coma flotante que el dominio evita usando bigint.
+ *
+ * El separador decimal **es el del idioma**. Parece un detalle y no lo es: la
+ * parte entera se agrupa con `toLocaleString`, así que en español los miles ya
+ * iban separados por puntos — y poner otro punto delante de los decimales daba
+ * `1.234.567.89012345 BTC`, donde el mismo signo significa dos cosas distintas y
+ * no se sabe dónde acaba el entero. En una herramienta que sirve para decir
+ * cuánto dinero se movió, eso no es cuestión de estilo.
  */
 export function formatBtc(sats: bigint): string {
   const negative = sats < 0n;
   const absolute = negative ? -sats : sats;
   const whole = absolute / SATS_PER_BTC;
   const fraction = (absolute % SATS_PER_BTC).toString().padStart(8, '0');
-  const grouped = whole.toLocaleString(getLocale() === 'es' ? 'es-ES' : 'en-US');
+  const grouped = whole.toLocaleString(localeTag());
 
-  return `${negative ? '−' : ''}${grouped}.${fraction} BTC`;
+  return `${negative ? '−' : ''}${grouped}${decimalSeparator()}${fraction} BTC`;
 }
 
 export function formatSats(sats: bigint): string {
-  return `${sats.toLocaleString(getLocale() === 'es' ? 'es-ES' : 'en-US')} sats`;
+  return `${sats.toLocaleString(localeTag())} sats`;
 }
 
 /** Hash truncado como en el mock: `85e72c…4b70f2`. */
@@ -38,14 +52,14 @@ export function shortHash(hash: string, head = 6, tail = 6): string {
 export function formatDate(epochSeconds: number): string {
   const date = new Date(epochSeconds * 1000);
 
-  return new Intl.DateTimeFormat(getLocale() === 'es' ? 'es-ES' : 'en-US', {
+  return new Intl.DateTimeFormat(localeTag(), {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(date);
 }
 
 export function formatNumber(value: number): string {
-  return value.toLocaleString(getLocale() === 'es' ? 'es-ES' : 'en-US');
+  return value.toLocaleString(localeTag());
 }
 
 /** sat/vB. El peso va en unidades de peso: vbytes = weight / 4. */
@@ -55,5 +69,5 @@ export function formatFeerate(fee: bigint, weight: number): string {
   const vbytes = weight / 4;
   const rate = Number(fee) / vbytes;
 
-  return `${rate.toFixed(1).replace('.', getLocale() === 'es' ? ',' : '.')} sat/vB`;
+  return `${rate.toFixed(1).replace('.', decimalSeparator())} sat/vB`;
 }

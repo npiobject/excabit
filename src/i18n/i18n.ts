@@ -67,6 +67,29 @@ export function t(key: MessageKey, params?: Record<string, string | number>): st
   });
 }
 
+/**
+ * Traduce eligiendo entre singular y plural según el número (RF-30).
+ *
+ * Español e inglés solo distinguen `one` y `other`, pero quién es `one` lo dice
+ * `Intl.PluralRules` y no un `count === 1` nuestro: es la misma razón por la que
+ * el separador decimal lo decide `Intl` y no una tabla propia. Si algún día se
+ * añade un idioma con dual o con reglas para el cero, esto ya funciona.
+ *
+ * Las dos claves se pasan enteras en vez de componer `${base}.one`: así siguen
+ * siendo `MessageKey` y el test que comprueba que ninguna clave usada falta en
+ * los json las ve.
+ */
+export function tPlural(
+  count: number,
+  one: MessageKey,
+  other: MessageKey,
+  params?: Record<string, string | number>,
+): string {
+  const rule = new Intl.PluralRules(current === 'es' ? 'es-ES' : 'en-US').select(count);
+
+  return t(rule === 'one' ? one : other, params);
+}
+
 /** Traduce todos los `[data-i18n]` del documento (se llama al cambiar idioma). */
 export function translateDom(root: ParentNode = document): void {
   root.querySelectorAll<HTMLElement>('[data-i18n]').forEach((element) => {

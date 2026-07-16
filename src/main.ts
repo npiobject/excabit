@@ -9,8 +9,8 @@
 import { App } from './app';
 import { MempoolProvider } from './data/providers/mempool';
 import type { Network } from './core/types';
-import { detectLocale, setLocale, t, translateDom, type Locale } from './i18n/i18n';
-import { formatNumber } from './i18n/format';
+import { detectLocale, setLocale, t, tPlural, translateDom, type Locale } from './i18n/i18n';
+import { formatBtc, formatNumber } from './i18n/format';
 import { ACTIONS, shortcutOf, type ActionId } from './ui/actions';
 import { Toolbar } from './ui/toolbar';
 import { SidePanel } from './ui/side-panel';
@@ -19,6 +19,7 @@ import { ShortcutsOverlay } from './ui/shortcuts-overlay';
 import { Toasts } from './ui/toasts';
 import { Tour } from './ui/tour';
 import { Minimap } from './graph/minimap';
+import { traceTaint } from './analysis/taint';
 import { TOKENS } from './graph/styles';
 import { loadInvestigation, saveInvestigation } from './persistence/investigation';
 import { Autosave } from './persistence/autosave';
@@ -266,15 +267,75 @@ function boot(): void {
       case 'exportCsv':
         exportCsv();
         break;
-      // Fase 6: taint y clustering. Se declaran en el registro para que
-      // aparezcan en la palette con su atajo desde ya, pero avisan en vez de
-      // fingir que funcionan.
       case 'followFunds':
+        toggleTaint();
+        break;
+      // Fase 6.2: clustering. Se declara en el registro para que aparezca en la
+      // palette con su atajo desde ya, pero avisa en vez de fingir que funciona.
       case 'cluster':
         toasts.show({ message: `${t(actionName(id))} — Fase 6`, timeout: 2500 });
         break;
     }
   }
+
+  /* ---------- Seguimiento de flujo de fondos (RF-18) ---------- */
+
+  /** Hay un rastro pintado. La misma acción lo quita: es un modo de ver, no un cambio. */
+  let tracing = false;
+
+  function toggleTaint(): void {
+    if (tracing) {
+      app.adapter.highlightTaint(null);
+      tracing = false;
+      statusMessage.textContent = '';
+
+      return;
+    }
+
+    const source = app.store.getState().selection.at(-1);
+    if (source === undefined) return;
+
+    const trace = traceTaint(app.store.getState().graph, { source });
+
+    // El origen siempre está en el rastro; con solo él, no hay nada que seguir.
+    if (trace.size <= 1) {
+      toasts.show({ message: t('taint.nowhere'), timeout: 4000 });
+
+      return;
+    }
+
+    app.adapter.highlightTaint(new Map([...trace].map(([id, node]) => [id, node.ratio])));
+    tracing = true;
+
+    // Lo que RF-18 pide enseñar: cuánto llega y en cuántos saltos. Se cuenta
+    // sobre los finales del rastro (lo que no vuelve a gastarse), no sobre todos
+    // los nodos: sumar cada paso contaría el mismo dinero varias veces.
+    const graph = app.store.getState().graph;
+    const spent = new Set(Object.values(graph.edges).map((edge) => edge.from));
+    const ends = [...trace.values()].filter((node) => node.id !== source && !spent.has(node.id));
+    const total = ends.reduce((sum, node) => sum + node.amount, 0n);
+    const hops = Math.max(...[...trace.values()].map((node) => node.hops));
+
+    // Los plurales se componen: «1 saltos» delata que nadie lo miró.
+    const reached = trace.size - 1;
+    statusMessage.textContent = t('taint.summary', {
+      nodes: tPlural(reached, 'taint.nodes.one', 'taint.nodes.other', {
+        count: formatNumber(reached),
+      }),
+      amount: formatBtc(total),
+      hops: tPlural(hops, 'taint.hops.one', 'taint.hops.other', { count: formatNumber(hops) }),
+    });
+  }
+
+  // El rastro es de una selección concreta: si cambia, lo pintado ya no
+  // corresponde a lo que hay seleccionado y engañaría más que ayudaría.
+  app.store.subscribe(() => {
+    if (!tracing) return;
+
+    app.adapter.highlightTaint(null);
+    tracing = false;
+    statusMessage.textContent = '';
+  });
 
   /* ---------- Persistencia y export (RF-21/22/23/24) ---------- */
 

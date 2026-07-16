@@ -138,5 +138,11 @@
   "restore.confirm": "Restaurar",
   "restore.discard": "Empezar de cero",
   "restore.restored": "Investigación restaurada",
-  "restore.corrupt": "El guardado automático estaba dañado y se ha descartado."
+  "restore.corrupt": "El guardado automático estaba dañado y se ha descartado.",
+  "taint.summary": "Rastro: {nodes} · {amount} en {hops}",
+  "taint.nowhere": "Ese nodo no lleva a ningún sitio: sus fondos no se han gastado en este grafo. Expande para seguir el rastro.",
+  "taint.nodes.one": "{count} nodo",
+  "taint.nodes.other": "{count} nodos",
+  "taint.hops.one": "{count} salto",
+  "taint.hops.other": "{count} saltos"
 }
