@@ -77,7 +77,25 @@ Cada requisito tiene ID `RF-XX`, prioridad (P1 imprescindible v1 / P2 alto valor
 
 **RF-23 (P1) — Export imagen.** PNG (y SVG en P2) del grafo completo o del viewport.
 
-**RF-24 (P2) — Export datos.** CSV de nodos y aristas (para Excel/Gephi). Enlace permanente que codifica la investigación en la URL (si cabe) o aviso de usar fichero.
+**RF-24 (P2) — Export datos.** CSV de nodos y aristas (para Excel/Gephi). Enlace permanente que reproduce la investigación desde la URL.
+
+> Detallado el 2026-07-16, al implementarlo. La redacción original decía «codifica la investigación en la URL (**si cabe**) o aviso de usar fichero». **Medido, no cabe casi nunca**, y eso cambia el diseño:
+>
+> | investigación | JSON | comprimido | en base64url |
+> |---|---|---|---|
+> | tx pequeña (3 nodos) | 2.817 | 713 | **951** |
+> | tx de ejemplo (30 nodos) | 24.123 | 3.849 | **5.132** |
+> | dirección (170 nodos) | 141.990 | 25.142 | **33.523** |
+>
+> Un enlace con el grafo entero dentro no funciona **ni para el ejemplo de la propia app**. «Si cabe» habría sido una función que casi siempre contesta que no.
+
+- **RF-24.1 — Qué viaja: las semillas, no el grafo.** El grafo está determinado por las txs que se cargaron: el enlace lleva **la red, la lista de txids, la raíz y las anotaciones** (etiqueta, color, nota), y el receptor los vuelve a pedir. Los txids son azar y no se comprimen, pero 32 bytes por tx es otra escala: una investigación de 6 txs son ~400 caracteres, no 33.523.
+- **RF-24.2 — Va en el fragmento (`#`), nunca en la query.** El fragmento **no se envía al servidor**: no aparece en los logs de GitHub Pages, ni en la cabecera `Referer` al pinchar un enlace saliente, ni en los proxies del camino. Una investigación dice qué direcciones te interesan, y **esta app existe justamente para no filtrar eso**. Ponerla en la query sería contradecir a la herramienta con la herramienta.
+- **RF-24.3 — El enlace no es el fichero, y se dice.** Reproducir exige que mempool.space responda: si el proveedor no está, el enlace no abre nada. El **fichero** sigue siendo el archivo autocontenido (RF-21) — esa es la lección del legacy, que murió con su clave. El enlace es para compartir **ahora**; el fichero, para guardar. Al copiarlo se dice, en una frase, sin letra pequeña.
+- **RF-24.4 — Given una URL demasiado larga, Then se avisa y se ofrece el fichero.** El límite es de la realidad, no del navegador: el fragmento no llega al servidor, así que no hay límite de servidor, pero los enlaces se pegan en chats y gestores que truncan. Por encima de **8.000** caracteres se avisa: es una investigación de más de ~120 txs, y a esa escala el fichero es la respuesta correcta de todos modos.
+- **RF-24.5 — Al abrir un enlace se reconstruye y se dice qué se está viendo.** Un grafo que aparece solo, sin explicación, es indistinguible de un fallo. Si alguna tx ya no se puede recuperar, se carga lo que sí y **se avisa de lo que falta**: media investigación dicha es útil; media investigación callada es una mentira.
+  - **No viaja el viewport**, y no por ahorrar: la pantalla de quien recibe el enlace no es la de quien lo manda. Se ajusta a la ventana de quien mira y, si no cabe legible, **se pliega solo** (RF-36.5) — abrir un enlace es la primera impresión de alguien que no construyó ese grafo, que es justo donde el plegado hace más falta.
+- Una dirección puede tener txs nuevas desde que se compartió el enlace: se reproducen **las txs que había**, no «lo que la dirección tenga hoy». El enlace es una foto, no una consulta viva.
 
 **RF-25 (P2) — Notas.** Nota de texto libre por nodo y por investigación.
 

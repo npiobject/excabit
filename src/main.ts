@@ -26,6 +26,12 @@ import { TOKENS } from './graph/styles';
 import { loadInvestigation, saveInvestigation } from './persistence/investigation';
 import { Autosave } from './persistence/autosave';
 import { toEdgesCsv, toNodesCsv, toSvg } from './persistence/export';
+import {
+  decodePermalink,
+  encodePermalink,
+  permalinkOf,
+  PERMALINK_MAX_LENGTH,
+} from './persistence/permalink';
 import { downloadDataUrl, downloadText, pickTextFile, timestampedName } from './ui/file-io';
 import { askConfirm, askRestore } from './ui/restore-prompt';
 import { Timeline } from './ui/timeline';
@@ -336,6 +342,9 @@ function boot(): void {
         break;
       case 'exportCsv':
         exportCsv();
+        break;
+      case 'copyLink':
+        void copyLink();
         break;
       case 'followFunds':
         toggleTaint();
@@ -720,6 +729,123 @@ function boot(): void {
     toasts.show({ message: t('persistence.exported', { name: 'CSV' }), timeout: 2500 });
   }
 
+  /* ---------- Enlace permanente (RF-24.1..24.5) ---------- */
+
+  /**
+   * Copia al portapapeles una URL que reproduce esto (RF-24).
+   *
+   * El enlace lleva **las semillas**, no el grafo: medido, el grafo de la tx de
+   * ejemplo son 5.132 caracteres de URL y el de una dirección con 6 txs, 33.523.
+   * Ver `persistence/permalink.ts`.
+   */
+  async function copyLink(): Promise<void> {
+    if (!requireGraph()) return;
+
+    const state = app.store.getState();
+    const payload = permalinkOf(state.graph, {
+      network: state.network,
+      ...(app.root === undefined ? {} : { rootTxid: app.root }),
+    });
+
+    if (payload.txids.length === 0) {
+      toasts.show({ message: t('link.nothing') });
+
+      return;
+    }
+
+    const encoded = await encodePermalink(payload);
+    const url = `${location.origin}${location.pathname}#i=${encoded}`;
+
+    // El límite no es del navegador —el fragmento no llega al servidor— sino de
+    // por dónde viaja un enlace: los chats y los gestores de tickets truncan sin
+    // avisar, y un enlace truncado no falla, abre otra cosa.
+    if (url.length > PERMALINK_MAX_LENGTH) {
+      toasts.show({ message: t('link.tooLong'), timeout: 8000 });
+
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // Sin permiso de portapapeles el enlace no se pierde: se pone en la barra,
+      // que es de donde se copia a mano desde que existen los navegadores.
+      location.hash = `i=${encoded}`;
+      toasts.show({ message: t('link.inBar'), timeout: 8000 });
+
+      return;
+    }
+
+    // Se dice lo que es y lo que no, en una frase (RF-24.3). Un enlace que
+    // depende del proveedor vendido como archivo sería la mentira que mató al
+    // legacy.
+    toasts.show({ message: t('link.copied'), timeout: 8000 });
+  }
+
+  /**
+   * Abre la investigación que venga en la URL (RF-24.5).
+   *
+   * Se hace antes que nada: si hay enlace, manda él y no el ejemplo ni el
+   * autosave — quien pincha un enlace viene a ver **eso**.
+   */
+  async function openFromLink(): Promise<boolean> {
+    const match = /^#i=(.+)$/.exec(location.hash);
+    if (match?.[1] === undefined) return false;
+
+    const result = await decodePermalink(match[1]);
+    if (!result.ok) {
+      toasts.show({ message: t('link.broken'), timeout: 8000 });
+
+      return false;
+    }
+
+    const payload = result.payload;
+    /*
+     * `applyNetwork` y no `adoptNetwork`: hace falta que la red entre **en el
+     * estado**, no solo en el proveedor.
+     *
+     * `adoptNetwork` cambia el cliente y la UI, que es lo que quiere quien abre
+     * un fichero — ahí la red ya viene dentro del estado restaurado. Aquí no:
+     * `reopen` solo mete txs. Un enlace de testnet dejaría `network: 'mainnet'`
+     * en el store, y al guardar el fichero saldrían txs de testnet marcadas como
+     * mainnet. Es la forma exacta del fallo de RF-04 que ya se cazó una vez.
+     */
+    applyNetwork(payload.network);
+
+    const { loaded, missing } = await app.reopen(payload.txids, payload.rootTxid);
+    app.annotate(payload.annotations);
+
+    if (loaded === 0) {
+      toasts.show({ message: t('link.gone'), timeout: 8000 });
+
+      return false;
+    }
+
+    app.adapter.fit();
+    /*
+     * Y se pliega si no cabe, igual que al buscar (RF-36.5).
+     *
+     * Cazado mirando la app: quien abría un enlace de 170 nodos se encontraba la
+     * maraña al 40 %, justo lo que RF-36.5 vino a quitar. El plegado estaba
+     * enganchado a buscar y a expandir, y abrir un enlace no es ninguna de las
+     * dos — pero es **la primera impresión de alguien que no construyó ese
+     * grafo**, que es donde más falta hace.
+     */
+    autoFoldIfUnreadable();
+
+    // Media investigación dicha es útil; media investigación callada es mentira.
+    if (missing.length > 0) {
+      toasts.show({
+        message: tPlural(missing.length, 'link.missing.one', 'link.missing.other', {
+          count: formatNumber(missing.length),
+        }),
+        timeout: 8000,
+      });
+    }
+
+    return true;
+  }
+
   /* ---------- Teclado: un único punto de decisión (BUG-017) ---------- */
 
   document.addEventListener('keydown', (event) => {
@@ -879,7 +1005,21 @@ function boot(): void {
 
   refresh();
   statusZoom.textContent = `${t('status.zoom')} 100%`;
-  void offerRestore();
+  void start();
+
+  /**
+   * Qué manda al arrancar, y en qué orden.
+   *
+   * El enlace primero: quien pincha uno viene a ver **eso**, y ofrecerle antes
+   * restaurar lo suyo de ayer —o peor, el tour— sería ponerle un obstáculo
+   * delante de lo que ha venido a mirar. Si no hay enlace (o está roto), la app
+   * arranca como siempre.
+   */
+  async function start(): Promise<void> {
+    if (await openFromLink()) return;
+
+    await offerRestore();
+  }
 
   /**
    * Al arrancar, si quedó algo a medias, se ofrece seguir (RF-22).

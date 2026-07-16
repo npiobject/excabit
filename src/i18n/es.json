@@ -165,5 +165,14 @@
   "action.toggleFold": "Plegar detalles",
   "fold.folded": "{count} plegados · pulsa P para verlos",
   "fold.none": "No hay nada que plegar: todas las direcciones llevan a algún sitio.",
-  "fold.auto": "El grafo no cabía en pantalla: se han plegado las direcciones que no llevan a ningún sitio. Pulsa P para verlas."
+  "fold.auto": "El grafo no cabía en pantalla: se han plegado las direcciones que no llevan a ningún sitio. Pulsa P para verlas.",
+  "action.copyLink": "Copiar enlace",
+  "link.copied": "Enlace copiado. Reproduce esta investigación pidiendo las txs a mempool.space: para guardarla de verdad, usa «Guardar» — el fichero no depende de nadie.",
+  "link.inBar": "El enlace está en la barra de direcciones: cópialo de ahí. No se ha podido usar el portapapeles.",
+  "link.tooLong": "La investigación es demasiado grande para un enlace: los chats truncan las URLs largas sin avisar. Usa «Guardar» y comparte el fichero.",
+  "link.nothing": "No hay ninguna transacción cargada que compartir.",
+  "link.broken": "Ese enlace no se puede leer: puede que se haya cortado al copiarlo.",
+  "link.gone": "Ninguna de las transacciones del enlace se ha podido recuperar. Puede que mempool.space no responda ahora mismo.",
+  "link.missing.one": "Se ha abierto el enlace, pero falta 1 transacción que no se ha podido recuperar.",
+  "link.missing.other": "Se ha abierto el enlace, pero faltan {count} transacciones que no se han podido recuperar."
 }

@@ -79,6 +79,42 @@ const MAX_NEIGHBOURS = 12;
 const NEIGHBOUR_GAP_X = 620;
 const NEIGHBOUR_GAP_Y = 560;
 
+/**
+ * Circunferencia por tx al rehacer una investigación desde un enlace (RF-24.5).
+ *
+ * Medido: los satélites de una tx ocupan un disco de unos 625 px de radio, así
+ * que con menos de esto las txs vecinas se pisan entre sí.
+ */
+const TX_SPREAD = 1400;
+
+/**
+ * De qué nodo cuelga el grafo: la dirección que toca más txs (RF-24.5).
+ *
+ * Al rehacer una investigación desde un enlace no se sabe qué se buscó — solo
+ * llegan los txids. Pero la forma **está en el grafo**: si seis txs comparten una
+ * dirección, esa dirección es de donde colgaban, y es lo que `searchAddress` usa
+ * de centro. Deducirlo evita meter la consulta original en el enlace para algo
+ * que se puede mirar.
+ *
+ * Con menos de dos txs no hay hub que valga: un nodo de paso no es un centro, y
+ * tomarlo por tal descolocaría el grafo en vez de ordenarlo.
+ */
+function hubOf(graph: Graph): string | undefined {
+  let best: { id: string; txs: number } | undefined;
+
+  for (const node of Object.values(graph.nodes)) {
+    if (node.kind !== 'address') continue;
+
+    const txs = Object.values(graph.edges).filter(
+      (edge) => edge.from === node.id || edge.to === node.id,
+    ).length;
+
+    if (txs >= 2 && (best === undefined || txs > best.txs)) best = { id: node.id, txs };
+  }
+
+  return best?.id;
+}
+
 export class App {
   readonly store: Store<InvestigationState>;
   readonly history = new History();
@@ -288,6 +324,30 @@ export class App {
     }
   }
 
+  /**
+   * Trae una tx con el estado de gasto de sus salidas. Lanza si no se puede.
+   *
+   * Los outspends se dan por perdidos si fallan (`catch(() => [])`): sin ellos la
+   * tx se ve entera, solo que sin saber qué salidas siguen sin gastar. Perder el
+   * marcado de UTXO es peor que no tener la tx, pero mucho menos.
+   */
+  private async fetchWithSpends(txid: Txid): Promise<NormalizedTx> {
+    const tx = await this.client.getTx(txid);
+    const spends = await this.client.getOutspends(txid).catch(() => []);
+
+    return {
+      ...tx,
+      vout: tx.vout.map((vout, n) => {
+        const spend = spends[n];
+        if (spend === undefined) return vout;
+
+        return spend.spent
+          ? { ...vout, spent: true, spentBy: spend.txid }
+          : { ...vout, spent: false };
+      }),
+    };
+  }
+
   private async load(
     txid: Txid,
     options: { asRoot?: boolean; center?: { x: number; y: number } } = {},
@@ -295,19 +355,7 @@ export class App {
     this.onStatus('loading');
 
     try {
-      const tx = await this.client.getTx(txid);
-      const spends = await this.client.getOutspends(txid).catch(() => []);
-      const withSpends: NormalizedTx = {
-        ...tx,
-        vout: tx.vout.map((vout, n) => {
-          const spend = spends[n];
-          if (spend === undefined) return vout;
-
-          return spend.spent
-            ? { ...vout, spent: true, spentBy: spend.txid }
-            : { ...vout, spent: false };
-        }),
-      };
+      const withSpends = await this.fetchWithSpends(txid);
 
       this.dispatch(addTxData(withSpends));
 
@@ -459,6 +507,135 @@ export class App {
     this.history.clear();
     this.adapter.setRoot(rootTxid === undefined ? '' : txNodeId(rootTxid));
     this.store.dispatch({ type: 'investigation:restore', apply: () => state });
+  }
+
+  /**
+   * Rehace una investigación desde sus txids (RF-24.5).
+   *
+   * Hermano de `restore`, y por lo mismo vacía el historial: abrir un enlace es
+   * abrir un documento, no editar el que había.
+   *
+   * **Lo que falla no aborta el resto.** Una tx que ya no se puede traer se
+   * apunta y se devuelve: media investigación **dicha** es útil, y quien abre un
+   * enlace prefiere ver cinco txs de seis con un aviso que una pantalla vacía con
+   * un error. Por eso no llama a `onError` — un aviso por tx caída sería una
+   * tormenta de avisos diciendo lo mismo; el resumen lo da la UI, una vez.
+   */
+  async reopen(
+    txids: readonly Txid[],
+    rootTxid: Txid | undefined,
+  ): Promise<{ loaded: number; missing: Txid[] }> {
+    this.onStatus('loading');
+
+    try {
+      const traidas: NormalizedTx[] = [];
+      const missing: Txid[] = [];
+
+      for (const txid of txids) {
+        try {
+          traidas.push(await this.fetchWithSpends(txid));
+        } catch {
+          missing.push(txid);
+        }
+      }
+
+      this.pages.clear();
+      this.rootTxid = rootTxid;
+      this.adapter.setRoot(rootTxid === undefined ? '' : txNodeId(rootTxid));
+
+      if (traidas.length > 0) {
+        // Un solo despacho, como una página de dirección: uno por tx serían N
+        // sincronizaciones del grafo entero con el motor (RF-31).
+        this.dispatch(addTxsData(traidas));
+
+        /*
+         * Tres vueltas, y cada una arregla algo que la anterior no puede.
+         *
+         * `layoutRadial` pone la raíz en el centro que le des **si no tiene sitio
+         * aún**. Llamarlo una vez por tx con `{0,0}` las deja a todas una encima
+         * de otra, y sus satélites en un único abanico pisado: el contador dice
+         * «170 nodos» y la pantalla enseña una maraña. Es el fallo de la Fase 3
+         * por tercera vez.
+         *
+         * 1. **El hub primero.** `searchAddress` no sufre esto porque su primera
+         *    vuelta reparte las txs alrededor de la dirección buscada. Aquí no se
+         *    sabe qué se buscó, pero **se ve en el grafo**: el hub es el nodo que
+         *    más txs toca. Colgarlo de ahí reproduce la forma que tenía quien
+         *    compartió el enlace — medido, el 77 % de zoom en vez del 30 % que da
+         *    repartirlas a ciegas.
+         * 2. **Anillo para las huérfanas.** Lo que el hub no alcanza (un grafo sin
+         *    hub, o txs de otra búsqueda) se reparte en círculo, con el radio
+         *    salido de la cuenta: cada tx ocupa un disco de ~625 px, así que
+         *    ~1.400 px de circunferencia por tx.
+         * 3. **Y cada tx coloca lo suyo** alrededor de donde ha caído.
+         */
+        let graph = this.store.getState().graph;
+
+        const hub = rootTxid === undefined ? hubOf(graph) : txNodeId(rootTxid);
+        if (hub !== undefined && graph.nodes[hub] !== undefined) {
+          graph = layoutRadial(graph, hub, { center: { x: 0, y: 0 } });
+        }
+
+        const sueltas = traidas.filter((tx) => graph.nodes[txNodeId(tx.txid)]?.placed !== true);
+        const ring = sueltas.length <= 1 ? 0 : (sueltas.length * TX_SPREAD) / (2 * Math.PI);
+        sueltas.forEach((tx, index) => {
+          const angle = (2 * Math.PI * index) / sueltas.length;
+          graph = layoutRadial(graph, txNodeId(tx.txid), {
+            center: { x: Math.cos(angle) * ring, y: Math.sin(angle) * ring },
+          });
+        });
+
+        for (const tx of traidas) {
+          // Ya tienen sitio: `layoutRadial` los respeta y solo orbita lo suyo.
+          graph = layoutRadial(graph, txNodeId(tx.txid), { center: { x: 0, y: 0 } });
+        }
+
+        this.store.dispatch({ type: 'Layout', apply: (current) => ({ ...current, graph }) });
+      }
+
+      this.history.clear();
+
+      return { loaded: traidas.length, missing };
+    } finally {
+      this.onStatus('idle');
+    }
+  }
+
+  /**
+   * Aplica etiquetas, colores y notas de golpe (RF-24.5).
+   *
+   * **No es deshacible, a propósito**: viene con el documento que se acaba de
+   * abrir, no es algo que el usuario haya hecho. Un Ctrl+Z que le quitara las
+   * etiquetas del enlace que acaba de abrir sería deshacer algo que él no hizo.
+   *
+   * Lo que apunta a un nodo que no está se ignora en silencio: si la tx no se
+   * pudo traer, su etiqueta no tiene dónde ir, y ya se avisó de que falta.
+   */
+  annotate(
+    annotations: readonly { id: string; label?: string; color?: string; note?: string }[],
+  ): void {
+    if (annotations.length === 0) return;
+
+    this.store.dispatch({
+      type: 'Annotate',
+      apply: (current) => {
+        const nodes = { ...current.graph.nodes };
+
+        for (const annotation of annotations) {
+          const node = nodes[annotation.id];
+          if (node === undefined) continue;
+
+          nodes[annotation.id] = {
+            ...node,
+            ...(annotation.label === undefined ? {} : { label: annotation.label }),
+            ...(annotation.color === undefined ? {} : { color: annotation.color }),
+            ...(annotation.note === undefined ? {} : { note: annotation.note }),
+          };
+        }
+
+        return { ...current, graph: { ...current.graph, nodes } };
+      },
+    });
   }
 
   destroy(): void {

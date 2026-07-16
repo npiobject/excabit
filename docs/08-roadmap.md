@@ -735,6 +735,80 @@ distingue «no lo dibujé» de «lo dibujé fuera del recorte».
 servía un `dist` viejo. Quitar el arreglo y ver el test en verde no probaba que el
 test fuera malo: probaba que el navegador no tenía el cambio.
 
+### 6.6 — RF-24: enlace permanente (2026-07-16)
+
+**La spec original pedía algo que no funciona.** Decía «codifica la investigación
+en la URL (**si cabe**) o aviso de usar fichero». Medido en la app antes de escribir
+una línea:
+
+| investigación | JSON | comprimido | en base64url |
+|---|---|---|---|
+| tx pequeña (3 nodos) | 2.817 | 713 | **951** |
+| tx de ejemplo (30 nodos) | 24.123 | 3.849 | **5.132** |
+| dirección (170 nodos) | 141.990 | 25.142 | **33.523** |
+
+El grafo entero en la URL no cabe **ni para el ejemplo de la propia app**: «si cabe»
+habría sido una función que casi siempre contesta que no.
+
+**Pero el grafo está determinado por las txs que se cargaron.** Con la lista de
+txids se rehace entero, y eso es otra escala: la misma dirección de 170 nodos son
+**533 caracteres**, verificado con datos reales. 63 veces menos.
+
+| | grafo en la URL | semillas en la URL |
+|---|---|---|
+| dirección (170 nodos) | 33.523 | **533** |
+
+**Va en el fragmento (`#`), no en la query**, y no es un detalle de formato: el
+fragmento no se envía al servidor. Una investigación dice qué direcciones te
+interesan, y esta app existe justamente para no filtrar eso — en la query acabaría
+en los logs de GitHub Pages y en el `Referer` del primer enlace saliente. Ponerla
+ahí sería contradecir a la herramienta con la herramienta.
+
+**El precio se dice, no se esconde**: reproducir exige que mempool.space responda.
+El fichero sigue siendo el archivo autocontenido (RF-21) — el legacy murió con su
+clave, y esa lección es de este proyecto. El aviso al copiar lo dice en una frase.
+
+**Dos fallos cazados mirando la app, con los tests en verde:**
+
+1. **Quien abría el enlace veía la maraña.** 170 nodos al 40 % sin plegar: justo lo
+   que RF-36.5 vino a quitar. El auto-plegado estaba enganchado a buscar y a
+   expandir, y abrir un enlace no es ninguna de las dos — pero es **la primera
+   impresión de alguien que no construyó ese grafo**, que es donde más falta hace.
+2. **Y el grafo salía mal.** Las 6 txs aparecían **una encima de otra** en un solo
+   abanico pisado: `layoutRadial` coloca la raíz en el centro que le des si no
+   tiene sitio aún, así que llamarlo N veces con `{0,0}` las apila. Es **el fallo
+   de la Fase 3 por tercera vez**, y otra vez el contador decía «170 nodos»
+   mientras la pantalla enseñaba una maraña.
+
+**El primer arreglo del layout tampoco valía, y el número lo dijo.** Repartir las
+txs en un anillo las dejaba de esquina a esquina, con las aristas cruzando el
+lienzo: **30 % de zoom** — por debajo del umbral de lectura, *incluso ya plegado*.
+El anillo estaba dimensionado para los satélites desplegados, que es justo lo que el
+auto-plegado esconde. Estructuralmente correcto y visualmente inútil.
+
+`searchAddress` no sufre nada de esto porque su primera vuelta cuelga las txs de la
+dirección buscada. Al rehacer desde un enlace no se sabe qué se buscó… **pero la
+forma está en el grafo**: si seis txs comparten una dirección, esa dirección es el
+hub. Deducirlo (`hubOf`: la dirección que más txs toca) evita meter la consulta
+original en el enlace para algo que se puede mirar, y reproduce la forma exacta:
+
+| layout al abrir el enlace | zoom |
+|---|---|
+| N × `layoutRadial({0,0})` | apiladas |
+| anillo a ciegas | 30 % |
+| **hub + anillo para las huérfanas** | **77 %** — el mismo que la búsqueda original |
+
+**El viewport no viaja**, y se quitó del formato al verlo: nada lo producía —código
+muerto— y, sobre todo, la pantalla de quien recibe no es la de quien manda. Un zoom
+copiado de un monitor de 2.560 px no enseña lo mismo en un portátil.
+
+**Una hora perdida por una negación.** El test de «el proveedor no responde» buscaba
+`/no se ha podido recuperar/` y el mensaje dice «**Ninguna** de las transacciones
+del enlace **se ha podido** recuperar»: la negación la lleva «Ninguna». Persiguiendo
+esa aserción falsa se descartaron tres teorías (backoff, pestaña de fondo,
+throttling de Chromium) antes de mirar el texto que el sondeo estaba imprimiendo.
+Cuando un test falla, lo primero es leer lo que **sí** dice el recibido.
+
 ## Riesgos y mitigaciones
 
 | Riesgo | Mitigación |

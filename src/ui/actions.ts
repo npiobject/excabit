@@ -22,6 +22,7 @@ import type { MessageKey } from '@/i18n/i18n';
 export type ActionId =
   | 'search'
   | 'expand'
+  | 'copyLink'
   | 'label'
   | 'color'
   | 'delete'
@@ -166,6 +167,7 @@ export const ACTIONS: readonly ActionDefinition[] = [
   { id: 'export', i18nKey: 'action.export', shortcut: 'e', icon: ICONS.export, inToolbar: true },
   { id: 'exportSvg', i18nKey: 'action.exportSvg', icon: ICONS.export },
   { id: 'exportCsv', i18nKey: 'action.exportCsv', icon: ICONS.export },
+  { id: 'copyLink', i18nKey: 'action.copyLink', icon: ICONS.export },
   { id: 'undo', i18nKey: 'action.undo', shortcut: 'ctrl+z', icon: ICONS.undo },
   { id: 'redo', i18nKey: 'action.redo', shortcut: 'ctrl+y', icon: ICONS.redo },
   { id: 'zoomIn', i18nKey: 'action.zoomIn', shortcut: '+', icon: ICONS.zoomIn },

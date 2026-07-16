@@ -165,5 +165,14 @@
   "action.toggleFold": "Fold details",
   "fold.folded": "{count} folded · press P to see them",
   "fold.none": "Nothing to fold: every address leads somewhere.",
-  "fold.auto": "The graph did not fit on screen, so addresses that lead nowhere have been folded. Press P to see them."
+  "fold.auto": "The graph did not fit on screen, so addresses that lead nowhere have been folded. Press P to see them.",
+  "action.copyLink": "Copy link",
+  "link.copied": "Link copied. It rebuilds this investigation by asking mempool.space for the transactions: to really keep it, use “Save” — the file depends on no one.",
+  "link.inBar": "The link is in the address bar: copy it from there. The clipboard was not available.",
+  "link.tooLong": "This investigation is too big for a link: chats truncate long URLs without warning. Use “Save” and share the file instead.",
+  "link.nothing": "There are no loaded transactions to share.",
+  "link.broken": "That link cannot be read: it may have been cut when copied.",
+  "link.gone": "None of the transactions in the link could be retrieved. mempool.space may not be responding right now.",
+  "link.missing.one": "The link opened, but 1 transaction could not be retrieved.",
+  "link.missing.other": "The link opened, but {count} transactions could not be retrieved."
 }
