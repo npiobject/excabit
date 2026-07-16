@@ -150,5 +150,16 @@
   "cluster.none": "No hay direcciones que agrupar: harían falta transacciones con varias entradas conocidas. Expande el grafo y vuelve a probar.",
   "cluster.ungrouped": "Agrupación deshecha. Las direcciones siguen ahí.",
   "page.more": "Cargadas las {loaded} transacciones más recientes. Hay más.",
-  "page.loadMore": "Cargar 25 más"
+  "page.loadMore": "Cargar 25 más",
+  "network.confirmTitle": "Cambiar de red vacía la investigación",
+  "network.confirmBody": "Una investigación es de una sola red: las transacciones de mainnet y de {network} no tienen nada que ver entre sí. Si continúas, el grafo se vaciará.",
+  "network.confirmOk": "Cambiar y vaciar",
+  "network.confirmCancel": "Seguir aquí",
+  "action.toggleTimeline": "Línea temporal",
+  "timeline.title": "Línea temporal",
+  "timeline.from": "Desde",
+  "timeline.to": "Hasta",
+  "timeline.close": "Cerrar la línea temporal",
+  "timeline.count": "{inside} de {total} txs",
+  "timeline.nothing": "No hay rango que filtrar: hacen falta al menos dos transacciones con fechas distintas."
 }

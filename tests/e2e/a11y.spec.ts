@@ -123,3 +123,25 @@ test('RF-30: el idioma elegido sobrevive a una recarga', async ({ browser }) => 
   await expect(fresh.locator('html')).toHaveAttribute('lang', 'en');
   await context.close();
 });
+
+test('RNF-05: la línea temporal y el diálogo de red no tienen violaciones serias', async ({
+  page,
+}) => {
+  // Dos piezas nuevas de la Fase 6.4: unos sliders y un diálogo modal. Los dos
+  // sitios donde es fácil colarse — un `<input type="range">` sin etiqueta no lo
+  // sabe leer nadie, y un diálogo sin `aria-modal` deja al lector de pantalla
+  // paseando por la página de detrás.
+  await page.fill('#search', ROOT_TXID);
+  await page.click('#searchBtn');
+  await expect
+    .poll(() =>
+      page.evaluate(() => Object.keys(window.excabit!.store.getState().graph.nodes).length),
+    )
+    .toBe(5);
+
+  await page.selectOption('#network', 'testnet');
+  await expect(page.locator('#confirmOverlay')).toBeVisible();
+
+  const dialog = await analyze(page);
+  expect(serious(dialog.violations).map((v) => v.id)).toEqual([]);
+});

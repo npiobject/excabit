@@ -95,6 +95,99 @@ export function askRestore(container: HTMLElement, data: RestorePromptData): Pro
   });
 }
 
+/**
+ * Confirmación genérica de «esto se pierde» (RF-04).
+ *
+ * Mismo overlay y mismo peso visual que el de restaurar: las dos son la misma
+ * clase de decisión —qué pasa con el trabajo que hay encima de la mesa— y
+ * merecen la misma cara. `true` = adelante; Esc equivale a cancelar, que es lo
+ * que no destruye nada.
+ */
+export function askConfirm(
+  container: HTMLElement,
+  texts: {
+    title: string;
+    body: string;
+    confirm: string;
+    cancel: string;
+    extra?: { label: string; onClick: () => void };
+  },
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay';
+    overlay.id = 'confirmOverlay';
+    overlay.role = 'dialog';
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'confirmTitle');
+
+    const box = document.createElement('div');
+    box.id = 'restoreBox';
+
+    const title = document.createElement('h2');
+    title.id = 'confirmTitle';
+    title.textContent = texts.title;
+
+    const body = document.createElement('p');
+    body.textContent = texts.body;
+
+    const foot = document.createElement('div');
+    foot.id = 'tourFoot';
+    foot.style.justifyContent = 'flex-end';
+
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'ghost';
+    cancel.id = 'confirmCancel';
+    cancel.textContent = texts.cancel;
+
+    const confirm = document.createElement('button');
+    confirm.type = 'button';
+    confirm.id = 'confirmOk';
+    confirm.textContent = texts.confirm;
+
+    foot.append(cancel);
+    if (texts.extra !== undefined) {
+      const extra = document.createElement('button');
+      extra.type = 'button';
+      extra.className = 'ghost';
+      extra.id = 'confirmExtra';
+      extra.textContent = texts.extra.label;
+      extra.addEventListener('click', () => {
+        texts.extra?.onClick();
+      });
+      foot.append(extra);
+    }
+    foot.append(confirm);
+
+    box.append(title, body, foot);
+    overlay.append(box);
+    container.append(overlay);
+
+    const close = (ok: boolean): void => {
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+      resolve(ok);
+    };
+
+    function onKey(event: KeyboardEvent): void {
+      if (event.key === 'Escape') close(false);
+    }
+
+    cancel.addEventListener('click', () => {
+      close(false);
+    });
+    confirm.addEventListener('click', () => {
+      close(true);
+    });
+    document.addEventListener('keydown', onKey);
+
+    // El foco va a «Cancelar»: en un diálogo que destruye algo, el Enter de
+    // alguien que va rápido no puede ser el que destruye.
+    cancel.focus();
+  });
+}
+
 /** Fecha legible en el idioma activo. Un ISO crudo no le dice nada a nadie. */
 function formatDate(iso: string): string {
   const date = new Date(iso);

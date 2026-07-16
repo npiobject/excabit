@@ -23,6 +23,14 @@ Cada requisito tiene ID `RF-XX`, prioridad (P1 imprescindible v1 / P2 alto valor
 
 **RF-04 (P2) — Selector de red.** mainnet / testnet / signet (mismo API de mempool.space). El workspace indica siempre la red activa.
 
+- **Una investigación es de una sola red.** Los txids de redes distintas no tienen nada que ver entre sí: un grafo con txs de dos redes no significa nada y, guardado, afirma algo falso.
+- Given una investigación con nodos, When se cambia de red, Then se avisa de que el grafo se vaciará y se ofrece guardarlo antes; si se confirma, el grafo y el historial quedan vacíos y la red cambia.
+- Given una investigación vacía, When se cambia de red, Then el cambio es inmediato y sin preguntar: no hay nada que perder.
+- Given un fichero guardado en `testnet`, When se abre, Then la app se pone en testnet: el selector, la barra de estado y **el proveedor al que se piden los datos**.
+- La red activa forma parte del estado de la investigación, no solo de la vista.
+
+> Añadido el 2026-07-16 al implementar la Fase 6.4. Lo anterior estaba a medias: el selector cambiaba el proveedor pero no el estado, así que el grafo mezclaba txs de mainnet y testnet y el fichero las guardaba todas como si fueran de la última red elegida.
+
 ## 2. Grafo
 
 **RF-05 (P1) — Layout radial inicial.** Given una Tx cargada, Then se renderiza al centro con sus inputs a la izquierda y outputs a la derecha como nodos dirección conectados; los outputs sin gastar se marcan visualmente como UTXO.
@@ -92,6 +100,18 @@ Cada requisito tiene ID `RF-XX`, prioridad (P1 imprescindible v1 / P2 alto valor
 **RF-33 (P3) — Modo presentación**: oculta paneles para docencia/captura.
 
 **RF-34 (P3) — Comparador de Txs**: dos Txs lado a lado con sus heurísticas.
+
+**RF-35 (P2) — Línea temporal.** Barra bajo el canvas con el rango de fechas de la investigación y dos tiradores; lo que cae fuera del rango se **atenúa**, no se borra.
+
+> Especificado el 2026-07-16 (Fase 6.4). El roadmap lo nombraba como «línea temporal (P2)» sin definirlo. De las tres formas posibles se eligió el filtro por rango porque responde a la pregunta forense típica —«qué se movió entre el 3 y el 9 de marzo»— y no pelea con el layout radial (RF-05), que coloca por flujo y es la seña de identidad de la app.
+
+- Given una investigación con transacciones confirmadas, When se abre la línea temporal, Then la barra abarca de la tx más antigua a la más reciente.
+- Given un rango elegido, When se aplica, Then las txs fuera de rango se atenúan y **sus datos no cambian**: es una forma de mirar, no una edición (no entra en el historial, Ctrl+Z no la deshace).
+- Given un rango, Then se dice cuántas txs quedan dentro (`12 de 47`): un filtro que no dice qué esconde es una trampa.
+- **Las txs sin confirmar** (`blockTime: null`) no tienen fecha: **nunca se filtran**, porque filtrar por una fecha que no existe sería inventarla. Están en el mempool, que es «ahora».
+- Given menos de dos txs con fecha, Then la barra no aparece: no hay rango que elegir.
+- Se combina con el rastro de fondos (RF-18): un nodo se ve si pasa **los dos** filtros. «El rastro de este dinero, en marzo» es una pregunta legítima.
+- Cerrar la línea temporal devuelve todo a la vista.
 
 ## 6. Requisitos no funcionales
 

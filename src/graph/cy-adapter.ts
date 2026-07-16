@@ -348,6 +348,40 @@ export class CyAdapter {
   }
 
   /**
+   * Atenúa lo que cae fuera del rango de fechas (RF-35).
+   *
+   * Clase propia (`outOfRange`) y no la del rastro (`dimmed`) a propósito: son
+   * dos filtros independientes y un nodo debe pasar **los dos** para verse. Con
+   * una sola clase, apagar el rastro devolvería a la vista txs que el rango tiene
+   * escondidas. Como las dos bajan la opacidad en el CSS, se combinan solas.
+   *
+   * `null` quita el filtro.
+   */
+  setTimeFilter(visible: ReadonlySet<string> | null): void {
+    this.syncing = true;
+
+    try {
+      if (visible === null) {
+        this.cy.elements().removeClass('outOfRange');
+
+        return;
+      }
+
+      this.cy.nodes().forEach((node) => {
+        node.toggleClass('outOfRange', !visible.has(node.id()));
+      });
+      // Una arista se ve si se ven sus dos extremos: si no, sería una línea que
+      // sale de la nada.
+      this.cy.edges().forEach((edge) => {
+        const inside = visible.has(edge.source().id()) && visible.has(edge.target().id());
+        edge.toggleClass('outOfRange', !inside);
+      });
+    } finally {
+      this.syncing = false;
+    }
+  }
+
+  /**
    * PNG del grafo (RF-23). Data URL.
    *
    * El único export que vive aquí y no en `persistence/`: un PNG es una foto de

@@ -382,7 +382,7 @@ Orden propuesto por valor/esfuerzo:
 1. Seguimiento de flujo de fondos (RF-18). ✅ **entregada el 2026-07-16** (ver abajo)
 2. Clustering de direcciones (RF-19). ✅ **entregada el 2026-07-16** (ver abajo)
 3. Expansión inteligente paginada (RF-31). ✅ **entregada el 2026-07-16** (ver abajo)
-4. Línea temporal (P2) y multi-red (RF-04).
+4. Línea temporal (RF-35) y multi-red (RF-04). ✅ **entregada el 2026-07-16** (ver abajo)
 5. Export avanzado + enlace permanente (RF-24).
 6. Alertas de patrones, modo presentación, comparador (P3).
 
@@ -554,6 +554,71 @@ crece: cuadrático, y con la cuarta página la UI se arrastra. Se agrupó en un
 `addTxsData` por página y un solo layout encadenado: **de 50 despachos a 2**, y el
 test bajó a 1,6 s. De paso arregla el undo, que ahora deshace *la página* y no
 veinticinco veces la misma tecla.
+
+### 6.4 — Multi-red (RF-04) y línea temporal (RF-35), entregada el 2026-07-16
+
+546 tests unit + 122 E2E.
+
+**La línea temporal no tenía spec**: el roadmap la nombraba como «línea temporal
+(P2)» y no existía ningún RF. Se especificó antes de tocar código (**RF-35**,
+docs/03) y se eligió, con el usuario, entre tres formas posibles: **filtro por
+rango de fechas**. Responde a la pregunta forense típica —«qué se movió entre el 3
+y el 9 de marzo»— y no pelea con el layout radial (RF-05), que coloca por flujo y
+es la seña de identidad de la app; un eje temporal la habría reventado.
+
+#### RF-04: estaba a medias y mezclaba redes
+
+**El bug, verificado en la app antes de tocar nada**: el selector cambiaba el
+proveedor pero **no el estado**. Con una investigación de mainnet abierta y el
+selector en testnet, el grafo acababa con **6 nodos de dos redes distintas** y el
+fichero los guardaba **todos** como `network: testnet`. Al reabrirlo, afirmaría
+que unas txs de mainnet son de testnet: datos falsos, del tipo que este proyecto
+existe para no repetir.
+
+- **Una investigación es de una sola red**, y por eso el vaciado va en el **mismo
+  comando** que el cambio (`setNetwork`): separarlos deja la puerta abierta a
+  hacer uno sin el otro, que es exactamente el estado del que veníamos.
+- **Se pregunta antes de vaciar**, con un atajo para guardar sin salir del
+  diálogo. El foco va a «Cancelar»: en un diálogo que destruye algo, el Enter de
+  quien va rápido no puede ser el que destruye.
+- **Cancelar revierte el desplegable**: si se quedara en la red que no es, estaría
+  mintiendo sobre lo que hay.
+- **Un fichero de testnet se abre en testnet**: selector, barra **y proveedor**.
+  Antes se abría y la app seguía pidiéndole los datos a mainnet. Hay un E2E que lo
+  comprueba donde importa — mirando a qué URL se le pregunta.
+- Verificado **por mutación**: reintroducido el bug (cambiar de red sin vaciar),
+  los dos tests que importan lo cazan.
+
+#### RF-35: el filtro
+
+- **Atenúa, no borra** (0,18 de opacidad, el mismo lenguaje que el rastro de la
+  6.1): filtrar es una forma de mirar. No entra en el historial y Ctrl+Z no lo
+  deshace.
+- **Clase propia** (`outOfRange`) y no la del rastro (`dimmed`): son dos filtros
+  independientes y un nodo debe pasar **los dos** para verse. Con una sola clase,
+  apagar el rastro devolvería a la vista lo que el rango esconde. Como las dos
+  bajan la opacidad, se combinan solas — «el rastro de este dinero, en marzo» es
+  una pregunta legítima y hay un E2E para ella.
+- **Las txs sin confirmar nunca se filtran**: no tienen fecha, y filtrarlas por
+  una fecha sería inventársela. Están en el mempool, que es «ahora».
+- **Las direcciones heredan de SUS txs, y solo de ellas.** La primera versión
+  propagaba por las aristas a secas y contagiaba en cadena: dos txs que comparten
+  una dirección de entrada —lo más normal, es H-07— se arrastraban la una a la
+  otra, y una tx de marzo salía visible con el rango puesto en enero. Lo cazó un
+  test que exigía que la dirección de la tx de marzo se fuera con ella.
+- **Dice cuántas esconde** (`2 de 3 txs`): un filtro mudo es una trampa — el
+  usuario ve menos cosas y no sabe si es que no hay más.
+- **Dos `<input type="range">` nativos**, no un slider a mano: traen teclado
+  (flechas, Inicio/Fin), foco y lector de pantalla, que es lo que un componente
+  casero nunca acaba de tener (RNF-05). Los tiradores no se cruzan: sin tope, el
+  rango queda del revés y apaga el grafo entero sin decir por qué.
+- **Sin dos fechas distintas la barra no sale**: un tirador que solo puede estar en
+  un sitio no filtra nada.
+
+**Detalle visual cazado mirando la app**: el `outline` de foco del `<input
+type="range">` rodea **todo** el input, que ocupa la pista entera — parecía una
+caja de texto naranja y tapaba la barra. El foco se marca ahora en el tirador, que
+es donde está la atención, sin perder visibilidad (RNF-05).
 
 ## Riesgos y mitigaciones
 

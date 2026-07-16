@@ -79,6 +79,24 @@ function patchNode(
   };
 }
 
+/**
+ * Cambia de red y **vacía la investigación** (RF-04).
+ *
+ * Una investigación es de una sola red. Los txids de mainnet y de testnet no
+ * tienen nada que ver entre sí: un grafo con las dos no significa nada, y
+ * guardado afirma algo falso —el fichero lleva **una** red, así que las txs de la
+ * otra quedarían etiquetadas con la que no es—.
+ *
+ * Por eso el vaciado va en el mismo comando que el cambio: son la misma decisión,
+ * y separarlos dejaría abierta la puerta a hacer uno sin el otro, que es
+ * exactamente el estado del que venimos.
+ */
+export function setNetwork(network: Network): UndoableCommand {
+  return reversible('SetNetwork', (state) =>
+    state.network === network ? state : { network, graph: emptyGraph(), selection: [] },
+  );
+}
+
 /** Vuelca los datos de una tx en el grafo (RF-06, idempotente). */
 export function addTxData(tx: NormalizedTx): UndoableCommand {
   return reversible('AddTxData', (state) => ({ ...state, graph: addTxToGraph(state.graph, tx) }));

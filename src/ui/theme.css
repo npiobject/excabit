@@ -783,6 +783,112 @@ dl {
   font-size: 11px;
 }
 
+/* ---------- LÍNEA TEMPORAL (RF-35) ---------- */
+
+/*
+ * Flotante sobre el canvas y abajo, como el minimapa: el grafo es lo que se está
+ * mirando y una barra que le robe alto lo encogería justo cuando se filtra, que
+ * es cuando más falta hace verlo.
+ */
+#timeline {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(560px, calc(100% - 220px));
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(1, 4, 9, 0.5);
+}
+#timeline[hidden] {
+  display: none;
+}
+
+/*
+ * Los dos tiradores, uno encima del otro: así comparten la misma pista y el
+ * rango se lee como un tramo, no como dos ajustes sueltos. Las pistas nativas se
+ * apagan y se pinta una sola detrás.
+ */
+#timelineSliders {
+  position: relative;
+  flex: 1;
+  height: 20px;
+}
+#timelineSliders::before {
+  content: '';
+  position: absolute;
+  top: 9px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
+}
+#timelineSliders input[type='range'] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  margin: 0;
+  height: 20px;
+  background: none;
+  appearance: none;
+  /* Sin esto, el de arriba tapa al de abajo y uno de los dos no se puede coger. */
+  pointer-events: none;
+}
+#timelineSliders input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--surface);
+  cursor: grab;
+  pointer-events: auto;
+}
+#timelineSliders input[type='range']::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--surface);
+  cursor: grab;
+  pointer-events: auto;
+}
+/*
+ * El foco se marca en el TIRADOR, no en el input.
+ *
+ * El `<input type="range">` ocupa toda la pista, así que su outline por defecto
+ * dibuja un rectángulo de lado a lado: parece una caja de texto y tapa la barra.
+ * Se quita de ahí y se pone donde está la atención — el foco sigue siendo bien
+ * visible (RNF-05), solo que en el sitio correcto.
+ */
+#timelineSliders input[type='range']:focus {
+  outline: none;
+}
+#timelineSliders input[type='range']:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+#timelineSliders input[type='range']:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+#timelineLabel {
+  flex: 0 0 auto;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
 /* ---------- TOUR (RF-32) y diálogo de restaurar (RF-22) ---------- */
 
 /* Mismo aspecto: son la misma clase de interrupción. Cambia dónde se plantan. */

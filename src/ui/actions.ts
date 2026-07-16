@@ -39,6 +39,7 @@ export type ActionId =
   | 'open'
   | 'palette'
   | 'shortcuts'
+  | 'toggleTimeline'
   | 'toggleMinimap'
   | 'togglePanel'
   | 'toggleLanguage';
@@ -89,6 +90,8 @@ const ICONS = {
   shortcuts:
     'M4 6h16v12H4V6zm2 2v8h12V8H6zm1 1h2v2H7V9zm3 0h2v2h-2V9zm3 0h2v2h-2V9zm3 0h1v2h-1V9zM7 12h2v2H7v-2zm3 0h7v2h-7v-2z',
   minimap: 'M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z',
+  timeline:
+    'M3 11h18v2H3v-2zm4-4a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm10 6a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM3 4h18v2H3V4zm0 14h18v2H3v-2z',
   panel: 'M3 4h18v16H3V4zm2 2v12h9V6H5zm11 0v12h3V6h-3z',
   language:
     'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm0 2c1.2 0 2.6 2 3.1 5H8.9C9.4 7 10.8 5 12 5zM5.3 10h2.4a19 19 0 0 0 0 4H5.3a7 7 0 0 1 0-4zm4.4 0h4.6a17 17 0 0 1 0 4H9.7a17 17 0 0 1 0-4zm6.6 0h2.4a7 7 0 0 1 0 4h-2.4a19 19 0 0 0 0-4zM12 19c-1.2 0-2.6-2-3.1-5h6.2c-.5 3-1.9 5-3.1 5z',
@@ -176,6 +179,7 @@ export const ACTIONS: readonly ActionDefinition[] = [
     hiddenInPalette: true,
   },
   { id: 'shortcuts', i18nKey: 'action.shortcuts', shortcut: '?', icon: ICONS.shortcuts },
+  { id: 'toggleTimeline', i18nKey: 'action.toggleTimeline', shortcut: 'l', icon: ICONS.timeline },
   { id: 'toggleMinimap', i18nKey: 'action.toggleMinimap', shortcut: 'm', icon: ICONS.minimap },
   { id: 'togglePanel', i18nKey: 'action.togglePanel', shortcut: ']', icon: ICONS.panel },
   { id: 'toggleLanguage', i18nKey: 'action.toggleLanguage', icon: ICONS.language },

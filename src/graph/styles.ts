@@ -203,7 +203,11 @@ export function graphStylesheet(): StylesheetStyle[] {
      * opacidad deja el resto del grafo como contexto —se ve dónde está el rastro
      * dentro de la investigación— sin competir por la atención.
      */
+    // Dos filtros, una misma forma de apagar: el rastro (RF-18) y el rango de
+    // fechas (RF-35). Con clases distintas se combinan sin pisarse — quitar el
+    // rastro no devuelve a la vista lo que el rango esconde.
     { selector: '.dimmed', style: { opacity: 0.18 } },
+    { selector: '.outOfRange', style: { opacity: 0.18 } },
     {
       selector: 'node.tainted',
       style: {

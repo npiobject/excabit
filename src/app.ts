@@ -26,6 +26,7 @@ import {
   setColor,
   createCluster,
   removeCluster,
+  setNetwork,
   deleteSelection,
   type InvestigationState,
   type UndoableCommand,
@@ -34,7 +35,7 @@ import { addressNodeId, txNodeId, type Graph } from './core/graph-model';
 import { detectSearchKind, normalizeTxid } from './core/validators';
 import { CyAdapter } from './graph/cy-adapter';
 import { layoutRadial } from './graph/layout-radial';
-import type { AddressId, NormalizedTx, Txid } from './core/types';
+import type { AddressId, Network, NormalizedTx, Txid } from './core/types';
 import { t, type MessageKey } from './i18n/i18n';
 import { analyzeTx } from './analysis/score';
 import { findClusters } from './analysis/clustering';
@@ -143,9 +144,34 @@ export class App {
     this.store.dispatch({ type: command.type, apply: () => next });
   }
 
-  /** Cambia de proveedor sin perder la investigación (RF-04). */
+  /** Cambia de proveedor sin tocar la investigación (RF-04, ADR-002: nodo propio). */
   setClient(client: ApiClient): void {
     this.client = client;
+  }
+
+  /** La red de la investigación en curso (RF-04). */
+  get network(): Network {
+    return this.store.getState().network;
+  }
+
+  /**
+   * Cambia de red: vacía la investigación y apunta el proveedor a la red nueva
+   * (RF-04).
+   *
+   * Las dos cosas van juntas a propósito. Antes el selector solo cambiaba el
+   * proveedor, y el grafo se quedaba con las txs de la red anterior: acababa
+   * habiendo mainnet y testnet mezcladas y el fichero las guardaba todas bajo la
+   * última red elegida. Quien avisa al usuario antes de perder el grafo es la UI;
+   * aquí ya está decidido.
+   */
+  changeNetwork(network: Network, makeClient: (network: Network) => ApiClient): void {
+    if (this.store.getState().network === network) return;
+
+    this.pages.clear();
+    this.rootTxid = undefined;
+    this.client = makeClient(network);
+    this.dispatch(setNetwork(network));
+    this.history.clear();
   }
 
   /**
@@ -429,6 +455,7 @@ export class App {
    */
   restore(state: InvestigationState, rootTxid: Txid | undefined): void {
     this.rootTxid = rootTxid;
+    this.pages.clear();
     this.history.clear();
     this.adapter.setRoot(rootTxid === undefined ? '' : txNodeId(rootTxid));
     this.store.dispatch({ type: 'investigation:restore', apply: () => state });

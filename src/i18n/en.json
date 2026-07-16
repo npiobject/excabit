@@ -150,5 +150,16 @@
   "cluster.none": "There are no addresses to group: that needs transactions with several known inputs. Expand the graph and try again.",
   "cluster.ungrouped": "Grouping undone. The addresses are still there.",
   "page.more": "Loaded the {loaded} most recent transactions. There are more.",
-  "page.loadMore": "Load 25 more"
+  "page.loadMore": "Load 25 more",
+  "network.confirmTitle": "Switching networks clears the investigation",
+  "network.confirmBody": "An investigation belongs to a single network: mainnet and {network} transactions have nothing to do with each other. If you continue, the graph will be cleared.",
+  "network.confirmOk": "Switch and clear",
+  "network.confirmCancel": "Stay here",
+  "action.toggleTimeline": "Timeline",
+  "timeline.title": "Timeline",
+  "timeline.from": "From",
+  "timeline.to": "To",
+  "timeline.close": "Close the timeline",
+  "timeline.count": "{inside} of {total} txs",
+  "timeline.nothing": "Nothing to filter: this needs at least two transactions with different dates."
 }

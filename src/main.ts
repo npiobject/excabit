@@ -20,12 +20,14 @@ import { Toasts } from './ui/toasts';
 import { Tour } from './ui/tour';
 import { Minimap } from './graph/minimap';
 import { traceTaint } from './analysis/taint';
+import { nodesInRange, timeRangeOf } from './analysis/timeline';
 import { TOKENS } from './graph/styles';
 import { loadInvestigation, saveInvestigation } from './persistence/investigation';
 import { Autosave } from './persistence/autosave';
 import { toEdgesCsv, toNodesCsv, toSvg } from './persistence/export';
 import { downloadDataUrl, downloadText, pickTextFile, timestampedName } from './ui/file-io';
-import { askRestore } from './ui/restore-prompt';
+import { askConfirm, askRestore } from './ui/restore-prompt';
+import { Timeline } from './ui/timeline';
 import './ui/theme.css';
 
 const EXAMPLE_TXID = '85e72c0814597ec52d2d178b7125af0e3cfa07821912ca81bf4b1fbe4b4b70f2';
@@ -272,6 +274,9 @@ function boot(): void {
           String(!panelRoot.classList.contains('collapsed')),
         );
         break;
+      case 'toggleTimeline':
+        toggleTimeline();
+        break;
       case 'toggleMinimap':
         toggleMinimap();
         break;
@@ -301,6 +306,64 @@ function boot(): void {
         break;
     }
   }
+
+  /* ---------- Línea temporal (RF-35) ---------- */
+
+  const timeline = new Timeline({
+    container: requireElement('canvasArea'),
+    onChange: () => {
+      applyTimeFilter();
+    },
+    onClose: () => {
+      app.adapter.setTimeFilter(null);
+    },
+  });
+
+  function toggleTimeline(): void {
+    if (timeline.isOpen) {
+      timeline.hide();
+      app.adapter.setTimeFilter(null);
+
+      return;
+    }
+
+    const bounds = timeRangeOf(app.store.getState().graph);
+    if (bounds === null) {
+      // Sin dos fechas distintas no hay rango que elegir: una barra con los dos
+      // tiradores en el mismo sitio sería un adorno que no filtra nada.
+      toasts.show({ message: t('timeline.nothing'), timeout: 4000 });
+
+      return;
+    }
+
+    timeline.show(bounds);
+    applyTimeFilter();
+  }
+
+  function applyTimeFilter(): void {
+    const graph = app.store.getState().graph;
+    const visible = nodesInRange(graph, timeline.range);
+
+    app.adapter.setTimeFilter(visible);
+
+    const txs = Object.values(graph.nodes).filter((node) => node.kind === 'tx');
+    timeline.setStatus(txs.filter((node) => visible.has(node.id)).length, txs.length);
+  }
+
+  // El grafo cambia (se expande, se carga otra cosa) → el rango de antes puede
+  // no tener sentido. Se recalcula si la barra sigue abierta.
+  app.store.subscribe(() => {
+    if (!timeline.isOpen) return;
+
+    if (timeRangeOf(app.store.getState().graph) === null) {
+      timeline.hide();
+      app.adapter.setTimeFilter(null);
+
+      return;
+    }
+
+    applyTimeFilter();
+  });
 
   /* ---------- Clustering de direcciones (RF-19) ---------- */
 
@@ -442,14 +505,7 @@ function boot(): void {
       return;
     }
 
-    app.restore(result.investigation.state, result.investigation.rootTxid);
-
-    const viewport = result.investigation.viewport;
-    if (viewport === undefined) app.adapter.fit();
-    else {
-      app.adapter.cy.zoom(viewport.zoom);
-      app.adapter.cy.pan({ x: viewport.panX, y: viewport.panY });
-    }
+    adoptInvestigation(result.investigation);
 
     toasts.show({ message: t('persistence.opened'), timeout: 2500 });
     // Los avisos del migrador se enseñan de uno en uno: un toast con cinco
@@ -574,12 +630,81 @@ function boot(): void {
   });
   requireElement('minimapToggle').addEventListener('click', toggleMinimap);
 
+  /**
+   * Cambiar de red vacía la investigación (RF-04), así que se pregunta antes.
+   *
+   * Una investigación es de una sola red —los txids de mainnet y testnet no
+   * tienen nada que ver— y hasta ahora el selector solo cambiaba el proveedor: el
+   * grafo se quedaba con las txs de la red anterior, acababa habiendo dos redes
+   * mezcladas y el fichero las guardaba todas bajo la última elegida.
+   */
   networkSelect.addEventListener('change', () => {
-    network = networkSelect.value as Network;
-    requireElement('statusNetwork').textContent = network;
-    app.setClient(new MempoolProvider({ network }));
-    toasts.show({ message: `${t('network.label')}: ${network}`, timeout: 1800 });
+    const wanted = networkSelect.value as Network;
+    if (wanted === app.network) return;
+
+    void confirmNetworkChange(wanted);
   });
+
+  async function confirmNetworkChange(wanted: Network): Promise<void> {
+    if (!isEmpty()) {
+      const ok = await askConfirm(requireElement('overlays'), {
+        title: t('network.confirmTitle'),
+        body: t('network.confirmBody', { network: wanted }),
+        confirm: t('network.confirmOk'),
+        cancel: t('network.confirmCancel'),
+        // Un atajo para no perder el trabajo: quien ve este diálogo quizá no
+        // había caído en que tenía algo sin guardar.
+        extra: { label: t('action.save'), onClick: saveToFile },
+      });
+
+      if (!ok) {
+        // Se revierte el desplegable: si no, diría una red que no es la activa.
+        networkSelect.value = app.network;
+
+        return;
+      }
+    }
+
+    applyNetwork(wanted);
+    toasts.show({ message: `${t('network.label')}: ${wanted}`, timeout: 1800 });
+  }
+
+  /** Cambio deliberado de red: vacía la investigación y lo refleja todo. */
+  function applyNetwork(target: Network): void {
+    app.changeNetwork(target, (net) => new MempoolProvider({ network: net }));
+    adoptNetwork(target);
+  }
+
+  /**
+   * Adopta la red que ya trae el estado, **sin vaciar nada** (RF-04).
+   *
+   * Es lo que hace falta al abrir un fichero o restaurar el autosave: la red no
+   * la elige el usuario en ese momento, viene dentro. Sin esto, un fichero de
+   * testnet se abría y la app seguía pidiéndole los datos a mainnet.
+   */
+  function adoptNetwork(target: Network): void {
+    network = target;
+    networkSelect.value = target;
+    requireElement('statusNetwork').textContent = target;
+    app.setClient(new MempoolProvider({ network: target }));
+  }
+
+  /** Vuelca una investigación cargada en la app: estado, red y viewport. */
+  function adoptInvestigation(investigation: {
+    state: Parameters<typeof app.restore>[0];
+    rootTxid: Parameters<typeof app.restore>[1];
+    viewport?: { zoom: number; panX: number; panY: number } | undefined;
+  }): void {
+    app.restore(investigation.state, investigation.rootTxid);
+    adoptNetwork(investigation.state.network);
+
+    const viewport = investigation.viewport;
+    if (viewport === undefined) app.adapter.fit();
+    else {
+      app.adapter.cy.zoom(viewport.zoom);
+      app.adapter.cy.pan({ x: viewport.panX, y: viewport.panY });
+    }
+  }
 
   function toggleMinimap(): void {
     const box = requireElement('minimap');
@@ -641,14 +766,7 @@ function boot(): void {
       return;
     }
 
-    app.restore(result.investigation.state, result.investigation.rootTxid);
-
-    const viewport = result.investigation.viewport;
-    if (viewport === undefined) app.adapter.fit();
-    else {
-      app.adapter.cy.zoom(viewport.zoom);
-      app.adapter.cy.pan({ x: viewport.panX, y: viewport.panY });
-    }
+    adoptInvestigation(result.investigation);
 
     toasts.show({ message: t('restore.restored'), timeout: 2500 });
   }
