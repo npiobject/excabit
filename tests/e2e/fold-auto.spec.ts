@@ -42,12 +42,6 @@ const visible = (page: Page): Promise<number> =>
   );
 
 /**
- * Cuánto hay pintado en el minimapa, en píxeles que no son fondo.
- *
- * Es un canvas: no hay nodos que contar ni DOM que interrogar, así que se mira
- * lo mismo que mira el usuario. El fondo se toma de la esquina, que es margen.
- */
-/**
  * Espera a que el minimapa haya repintado.
  *
  * Se dibuja en `requestAnimationFrame` (RNF-01: como mucho un repintado por
@@ -70,6 +64,12 @@ const settleMinimap = (page: Page): Promise<void> =>
 const drawnNodes = (page: Page): Promise<number> =>
   page.evaluate(() => window.excabitMinimap!.stats.drawnNodes);
 
+/**
+ * Cuánto hay pintado en el minimapa, en píxeles que no son fondo.
+ *
+ * Es un canvas: no hay nodos que contar ni DOM que interrogar, así que se mira
+ * lo mismo que mira el usuario. El fondo se toma de la esquina, que es margen.
+ */
 const minimapInk = (page: Page): Promise<number> =>
   page.evaluate(() => {
     const canvas = document.querySelector<HTMLCanvasElement>('#minimapBody canvas');
@@ -119,9 +119,7 @@ test('fitZoom() no mueve la vista: preguntar no es actuar', async ({ page }) => 
     const despues = { zoom: cy.zoom(), pan: { ...cy.pan() } };
 
     return (
-      antes.zoom !== despues.zoom ||
-      antes.pan.x !== despues.pan.x ||
-      antes.pan.y !== despues.pan.y
+      antes.zoom !== despues.zoom || antes.pan.x !== despues.pan.x || antes.pan.y !== despues.pan.y
     );
   });
 
@@ -142,9 +140,9 @@ test('RF-36: tras plegarse solo, el grafo ya cabe legible', async ({ page }) => 
   // Es la razón de ser de todo esto: no «hay menos nodos», sino «ahora se lee».
   await openGraph(page, WIDE_FAN);
 
-  await expect.poll(() => page.evaluate(() => window.excabit!.adapter.fitZoom())).toBeGreaterThanOrEqual(
-    AUTO_FOLD_ZOOM,
-  );
+  await expect
+    .poll(() => page.evaluate(() => window.excabit!.adapter.fitZoom()))
+    .toBeGreaterThanOrEqual(AUTO_FOLD_ZOOM);
 });
 
 test('RF-36: un grafo que cabe NO se pliega solo', async ({ page }) => {

@@ -40,8 +40,7 @@ const outValue = (i: number): number => (i === 1 ? 70_000 : 30_000);
 function fakeTx(txid: string, fan: number) {
   const address = (seed: string) => `addr${seed}${txid.slice(0, 6)}`;
   const indexes = Array.from({ length: fan }, (_, i) => i + 1);
-  const total = (f: (i: number) => number): number =>
-    indexes.reduce((sum, i) => sum + f(i), 0);
+  const total = (f: (i: number) => number): number => indexes.reduce((sum, i) => sum + f(i), 0);
 
   return {
     txid,
