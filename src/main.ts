@@ -51,6 +51,15 @@ import './ui/theme.css';
  */
 const EXAMPLE_TXID = 'aaeb5265d04d7c89c584a5ecb8dd95cb4ab7773ba6d27eaaff7e08a08f8d530b';
 
+/**
+ * Por debajo de este zoom, el grafo se pliega solo (RF-36).
+ *
+ * Es el umbral de lectura, no un número redondo: el texto de una tx (9 px) deja
+ * de pintarse por debajo del 55 % (`MIN_READABLE_PX` en `graph/styles.ts`), y un
+ * grafo de cajas mudas no informa de nada.
+ */
+const AUTO_FOLD_ZOOM = 0.55;
+
 declare global {
   interface Window {
     /**
@@ -211,6 +220,7 @@ function boot(): void {
     search.removeAttribute('aria-invalid');
     void app.search(value).then(() => {
       offerMore(value);
+      autoFoldIfUnreadable();
     });
   };
 
@@ -247,7 +257,13 @@ function boot(): void {
         search.select();
         break;
       case 'expand':
-        for (const nodeId of state.selection) void app.expand(nodeId);
+        // Expandir es lo que más nodos trae de golpe: es justo cuando el grafo
+        // puede pasar de caber a no caber.
+        for (const nodeId of state.selection) {
+          void app.expand(nodeId).then(() => {
+            autoFoldIfUnreadable();
+          });
+        }
         break;
       case 'label': {
         const target = state.selection.at(-1);
@@ -374,6 +390,9 @@ function boot(): void {
       folded = false;
       unfolded.clear();
       statusFold.textContent = '';
+      // Si lo despliega a mano, no se vuelve a plegar solo: ya ha dicho que lo
+      // quiere ver entero.
+      autoFoldOffered = true;
 
       return;
     }
@@ -386,6 +405,45 @@ function boot(): void {
 
     folded = true;
     applyFold();
+  }
+
+  /** Ya se ha plegado solo una vez (o el usuario ha desplegado a mano). */
+  let autoFoldOffered = false;
+
+  /**
+   * Pliega solo si el grafo no cabe legible (RF-36).
+   *
+   * **Por qué automático y no esperando a que se pulse `P`**: con 170 nodos el
+   * grafo no cabe, y eso no tiene arreglo por layout. Los números: una tx con 27
+   * satélites ocupa un disco de 625 px de radio; separar dos vecinas lo bastante
+   * para que no se pisen deja el grafo en 6.720 px de alto → 15 % de zoom, **peor**
+   * que el 37 % de ahora. O se pisan o no caben: es geometría, no un fallo.
+   *
+   * Plegar es la única salida real, así que la app la toma cuando hace falta en
+   * vez de dejar al usuario delante de un manchurrón esperando que descubra una
+   * tecla. Lo dice —status y aviso—, se deshace con `P`, y no insiste: quien
+   * despliega a mano no vuelve a encontrárselo plegado.
+   */
+  function autoFoldIfUnreadable(): void {
+    if (folded || autoFoldOffered) return;
+
+    // El umbral es el de la legibilidad, no un número redondo: por debajo, el
+    // texto de las txs ya no se pinta (`MIN_READABLE_PX`) y lo que queda son
+    // cajas mudas.
+    //
+    // Se pregunta sin ajustar: `expand` no movía la vista, y no es aceptable que
+    // empiece a moverla por el hecho de mirar. Si no hay que plegar, esto no se
+    // nota en absoluto.
+    if (app.adapter.fitZoom() >= AUTO_FOLD_ZOOM) return;
+
+    const foldable = foldableOf(app.store.getState().graph);
+    if (foldable.size === 0) return;
+
+    folded = true;
+    autoFoldOffered = true;
+    applyFold();
+    app.adapter.fit();
+    toasts.show({ message: t('fold.auto'), timeout: 8000 });
   }
 
   // Un click en «+N» abre lo de ese vecino, sin salir del modo (RF-36.4).

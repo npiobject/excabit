@@ -117,7 +117,7 @@ Cada requisito tiene ID `RF-XX`, prioridad (P1 imprescindible v1 / P2 alto valor
 
 > Especificado el 2026-07-16 tras medir el problema en la app. Los números que lo motivan: el ejemplo (30 nodos) queda al **34 %** de zoom y una dirección con 6 txs (170 nodos) al **13 %**, donde una etiqueta ocupa 5 px. **El 96-97 % de los nodos son direcciones y el 98-100 % de ellas aparecen una sola vez**: el grafo está dominado por nodos que no llevan a ningún sitio. Y el radio del radial crece **lineal** con el número de satélites, mientras el semicírculo los reparte en 180° verticales — el grafo crece a lo alto y la pantalla es apaisada.
 
-Cuatro mecanismos, complementarios. Los dos primeros cambian **cómo** se dibuja; los otros dos, **cuánto**:
+Cinco mecanismos, complementarios. Los dos primeros cambian **cómo** se dibuja; los dos siguientes, **cuánto**; el último, **cuándo**:
 
 - **RF-36.1 — Anillos concéntricos.** Given una Tx con más satélites de los que caben en un arco, When se coloca, Then se reparten en varios anillos y el radio crece como √N en vez de lineal. Sigue siendo el radial de RF-05: entradas a la izquierda, salidas a la derecha.
 - **RF-36.2 — Detalle según el zoom.** Given un zoom por debajo del umbral de lectura, Then no se pinta el texto: a 13 % una etiqueta son 5 px de suciedad que emborronan sin informar. Los datos no cambian, solo lo que se dibuja.
@@ -125,6 +125,12 @@ Cuatro mecanismos, complementarios. Los dos primeros cambian **cómo** se dibuja
 - **RF-36.4 — Direcciones de paso plegadas.** Given una Tx con muchas direcciones que solo tocan esa Tx (grado 1: no llevan a ningún sitio), When se pliegan, Then se representan por un nodo resumen `+N` que se despliega al pulsarlo.
   - **Nunca se ocultan sin decirlo.** El nodo resumen es visible, dice cuántas esconde y se abre con un click. «El grafo es la interfaz» (docs/00) sigue en pie: plegar es una forma de mirar, no de esconder. Un grafo ilegible tampoco enseña esas direcciones — solo finge que sí.
   - Plegar y desplegar **no tocan los datos**: no entran en el historial y Ctrl+Z no los deshace.
+- **RF-36.5 — Se pliega solo cuando hace falta.** Given un grafo que, ajustado a la pantalla, quedaría por debajo del umbral de lectura, When termina de cargarse o de expandirse, Then se pliega solo (RF-36.3/36.4), se reajusta y se avisa.
+  - **Por qué automático y no esperando a que se pulse `P`:** el plegado ya resolvía el problema desde la primera versión; lo que no resolvía era que hubiera que **descubrir la tecla**. Lo primero que ve quien busca una dirección con 6 txs es la maraña, y ahí es donde se decide si la herramienta sirve.
+  - **Y no hay alternativa por layout.** Medido: una tx con 27 satélites ocupa un disco de 625 px de radio; separar lo bastante para que nada se pise da un grafo de 6.720 px — el 15 % de zoom, **peor** que el 37 % de partida. Con 170 nodos, o se pisan o no caben: es geometría, no un fallo que arreglar.
+  - **El umbral es el de la legibilidad**, no un número redondo: por debajo del 55 % el texto de una tx (9 px) deja de pintarse (RF-36.2), y un grafo de cajas mudas no informa. Preguntar «¿cabe?» **no mueve la vista**: quien está mirando un rincón con lupa no espera saltar a otro sitio porque la app haya decidido medir algo.
+  - **No insiste.** Given que el usuario ha desplegado a mano, Then no se vuelve a plegar solo: ya ha dicho que lo quiere ver entero, y repetirlo sería discutir con él.
+  - Given un grafo que cabe legible, Then no se toca: plegar lo que ya se leía es quitar información a cambio de nada.
 
 ## 6. Requisitos no funcionales
 

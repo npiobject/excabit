@@ -43,6 +43,9 @@ export interface CyAdapterOptions {
  * borraría por no encontrarlos en el grafo. El prefijo es lo que los distingue,
  * y por eso no puede chocar con `tx:` ni `addr:` ni `cluster:`.
  */
+/** Margen que `fit()` deja alrededor del grafo, en píxeles de pantalla. */
+const FIT_PADDING = 48;
+
 const FOLD_SUMMARY_PREFIX = 'fold:';
 const FOLD_SUMMARY_SELECTOR = '[kind = "foldSummary"]';
 const FOLD_SUMMARY_GAP = 150;
@@ -301,7 +304,7 @@ export class CyAdapter {
    * puede alejar cuanto haga falta, pero nunca acercar más de lo natural.
    */
   fit(): void {
-    this.cy.fit(undefined, 48);
+    this.cy.fit(undefined, FIT_PADDING);
     if (this.cy.zoom() > 1) {
       this.cy.zoom({
         level: 1,
@@ -309,6 +312,31 @@ export class CyAdapter {
       });
       this.cy.center();
     }
+  }
+
+  /**
+   * A qué zoom quedaría el grafo si se ajustara ahora — sin ajustarlo.
+   *
+   * Existe para poder preguntar «¿cabe esto legible?» (RF-36) sin el efecto
+   * secundario de `fit()`: quien está mirando un rincón con lupa no espera que
+   * la vista le salte a otro sitio porque la app haya decidido medir algo.
+   *
+   * Réplica de la cuenta de `fit()`, con el mismo tope al 100 % y el mismo
+   * margen — de ahí que ambos salgan de `FIT_PADDING`. `boundingBox()` ya
+   * excluye lo que está plegado (`display: none`), que es justo lo que hace que
+   * plegar sirva de algo.
+   */
+  fitZoom(): number {
+    const box = this.cy.elements().boundingBox();
+    // Sin nada que medir, «cabe»: es la respuesta que no hace actuar a nadie.
+    if (box.w === 0 || box.h === 0) return 1;
+
+    const zoom = Math.min(
+      (this.cy.width() - 2 * FIT_PADDING) / box.w,
+      (this.cy.height() - 2 * FIT_PADDING) / box.h,
+    );
+
+    return zoom > 1 ? 1 : zoom;
   }
 
   /**

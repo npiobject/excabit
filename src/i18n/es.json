@@ -164,5 +164,6 @@
   "timeline.nothing": "No hay rango que filtrar: hacen falta al menos dos transacciones con fechas distintas.",
   "action.toggleFold": "Plegar detalles",
   "fold.folded": "{count} plegados · pulsa P para verlos",
-  "fold.none": "No hay nada que plegar: todas las direcciones llevan a algún sitio."
+  "fold.none": "No hay nada que plegar: todas las direcciones llevan a algún sitio.",
+  "fold.auto": "El grafo no cabía en pantalla: se han plegado las direcciones que no llevan a ningún sitio. Pulsa P para verlas."
 }

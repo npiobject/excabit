@@ -39,10 +39,26 @@ export interface MinimapStats {
   graphRepaints: number;
   /** Veces que se ha repintado el recuadro del viewport. */
   viewportRepaints: number;
+  /**
+   * Qué entró en el último repintado del grafo.
+   *
+   * Se expone porque desde fuera el minimapa es un canvas, y contar píxeles no
+   * distingue «no lo dibujé» de «lo dibujé fuera del recorte» — que es justo
+   * como se colaba el fallo de plegar: `boundingBox()` ya excluía lo plegado,
+   * así que lo escondido se pintaba lejos y el recorte lo tapaba. Menos tinta
+   * por accidente, no por acierto.
+   */
+  drawnNodes: number;
+  drawnEdges: number;
 }
 
 export class Minimap {
-  readonly stats: MinimapStats = { graphRepaints: 0, viewportRepaints: 0 };
+  readonly stats: MinimapStats = {
+    graphRepaints: 0,
+    viewportRepaints: 0,
+    drawnNodes: 0,
+    drawnEdges: 0,
+  };
   private readonly canvas: HTMLCanvasElement;
   /** Capa cacheada con el grafo: sobrevive a los pans. */
   private readonly layer: HTMLCanvasElement;
@@ -135,7 +151,7 @@ export class Minimap {
 
   /** Encaja el grafo entero con margen. Depende de los bounds: se cachea. */
   private projection(): Projection | null {
-    const bounds = this.cy.elements().boundingBox();
+    const bounds = this.cy.elements(':visible').boundingBox();
     const { width, height } = this.canvas;
     if (bounds.w === 0 || bounds.h === 0) return null;
 
@@ -160,15 +176,38 @@ export class Minimap {
     context.fillRect(0, 0, this.layer.width, this.layer.height);
 
     this.projectionCache = this.projection();
-    if (this.projectionCache === null) return;
+    if (this.projectionCache === null) {
+      // Sin proyección no se dibuja nada, y los contadores tienen que decirlo:
+      // dejarlos como estaban sería que hablaran del repintado anterior.
+      this.stats.drawnNodes = 0;
+      this.stats.drawnEdges = 0;
+
+      return;
+    }
 
     const { scale, offsetX, offsetY } = this.projectionCache;
     const toMap = (x: number, y: number) => ({ x: x * scale + offsetX, y: y * scale + offsetY });
 
-    // Aristas primero: los nodos van encima.
+    /*
+     * Solo lo que se ve (`:visible`), en los dos bucles y en la proyección.
+     *
+     * Plegado (RF-36) esto dibujaba los 170 nodos mientras la pantalla enseñaba
+     * 16: el minimapa contradecía al grafo justo cuando la app acababa de decir
+     * «ya cabe». Y era peor que un desajuste estético — `boundingBox()` ya
+     * excluía lo plegado, así que los nodos escondidos se proyectaban contra
+     * unos límites que no los contenían y salían desperdigados por el mapa.
+     *
+     * `:visible` es display/visibility, no opacidad: lo atenuado (RF-18, RF-35)
+     * sigue saliendo, que es lo que se quiere — está atenuado, no ausente.
+     */
+    const edges = this.cy.edges(':visible');
+    const nodes = this.cy.nodes(':visible');
+    this.stats.drawnEdges = edges.length;
+    this.stats.drawnNodes = nodes.length;
+
     context.strokeStyle = TOKENS.border;
     context.lineWidth = 1;
-    this.cy.edges().forEach((edge) => {
+    edges.forEach((edge) => {
       const from = toMap(edge.source().position('x'), edge.source().position('y'));
       const to = toMap(edge.target().position('x'), edge.target().position('y'));
       context.beginPath();
@@ -177,7 +216,7 @@ export class Minimap {
       context.stroke();
     });
 
-    this.cy.nodes().forEach((node) => {
+    nodes.forEach((node) => {
       const { x, y } = toMap(node.position('x'), node.position('y'));
       const isTx = node.data('kind') === 'tx';
       context.fillStyle = node.data('isRoot') === true ? TOKENS.accent : TOKENS.textDim;

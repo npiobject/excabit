@@ -693,9 +693,47 @@ foco, quien navega con teclado vería la mitad de los atajos y no podría llegar
 resto. De paso se descubrió que el `.focus()` de esa caja no hacía nada: era un
 `<div>` sin `tabindex`.
 
-**Pendiente**: con 170 nodos sin plegar, los satélites de txs vecinas todavía se
-pisan (6 px) — cada tx coloca los suyos sin saber de las demás. Plegado deja de
-notarse, pero el layout global sigue sin ser consciente de sus vecinos.
+**El solapamiento pendiente: no se arregla, se disuelve (RF-36.5, 2026-07-16)**
+
+Quedaba que, con 170 nodos sin plegar, los satélites de txs vecinas se pisaban
+(6 px): cada tx coloca los suyos sin saber de las demás. La salida evidente era un
+layout consciente de sus vecinos. **Los números dicen que sería peor:** una tx con
+27 satélites ocupa un disco de 625 px de radio, y separar lo bastante para que nada
+se pise da un grafo de 6.720 px — **el 15 % de zoom, frente al 37 % de partida**.
+Con 170 nodos, o se pisan o no caben: es geometría, no un fallo.
+
+Así que el solapamiento no era el problema; era un síntoma de mirar 170 nodos a la
+vez. La solución ya existía —el plegado— y lo que faltaba era que se aplicara
+**cuando hace falta**, sin tener que descubrir la tecla `P`. Medido en la app real
+con `16CGpvKmQhyMT4sTjAuJU5rNhvW2PHyeZo` (170 nodos, datos reales de mempool.space):
+
+| | sin plegar | plegado solo |
+|---|---|---|
+| zoom al que cabe | 32 % | **77 %** |
+| nodos a la vista | 170 | 16 |
+
+`fitZoom()` (nuevo en `cy-adapter`) responde «¿a qué zoom cabría?» **sin ajustar**:
+`expand` no movía la vista y no era aceptable que empezara a moverla por el hecho de
+medir. Como duplica la cuenta de `fit()`, hay un E2E dedicado a que no se separen —
+dos cuentas que deben coincidir son dos cuentas que pueden derivar.
+
+**El minimapa contradecía al grafo (cazado mirando la app).** Dibujaba `cy.nodes()`
+a secas: con el grafo plegado enseñaba los 170 mientras la pantalla enseñaba 16 —
+justo cuando la app acababa de decir «ya cabe». Y no era estético: `boundingBox()`
+**sí** excluía lo plegado, así que los nodos escondidos se proyectaban contra unos
+límites que no los contenían y salían desperdigados por el mapa. Ninguno de los 130
+E2E lo veía: ninguno miraba el minimapa con el grafo plegado.
+
+**El primer test del arreglo no probaba nada.** Contaba píxeles pintados, y pasaba
+igual sin el arreglo: al recortarse contra el canvas, lo mal dibujado daba *menos*
+tinta — acertaba por accidente. Se cambió por el invariante de verdad (`drawnNodes`
+== nodos visibles), que sin el arreglo falla con **42 frente a 3**. Contar píxeles no
+distingue «no lo dibujé» de «lo dibujé fuera del recorte».
+
+**Y el experimento que lo demostró tampoco valía la primera vez:** Playwright tiene
+`reuseExistingServer` en local, y un `vite preview` que se había quedado corriendo
+servía un `dist` viejo. Quitar el arreglo y ver el test en verde no probaba que el
+test fuera malo: probaba que el navegador no tenía el cambio.
 
 ## Riesgos y mitigaciones
 

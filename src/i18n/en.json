@@ -164,5 +164,6 @@
   "timeline.nothing": "Nothing to filter: this needs at least two transactions with different dates.",
   "action.toggleFold": "Fold details",
   "fold.folded": "{count} folded · press P to see them",
-  "fold.none": "Nothing to fold: every address leads somewhere."
+  "fold.none": "Nothing to fold: every address leads somewhere.",
+  "fold.auto": "The graph did not fit on screen, so addresses that lead nowhere have been folded. Press P to see them."
 }
