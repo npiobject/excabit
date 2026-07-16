@@ -146,7 +146,11 @@ export const ACTIONS: readonly ActionDefinition[] = [
     shortcut: 'g',
     icon: ICONS.cluster,
     inToolbar: true,
-    needsSelection: true,
+    // **Sin `needsSelection`** (lo tenía al declararse en la Fase 4, antes de
+    // implementarla): en RF-19 quien agrupa es la heurística, no el usuario. No
+    // hay nada que seleccionar antes de saber qué direcciones firman juntas —
+    // eso es justo lo que la acción viene a averiguar. Con un cluster
+    // seleccionado, la misma tecla lo deshace.
   },
   { id: 'fit', i18nKey: 'action.fit', shortcut: '0', icon: ICONS.fit, inToolbar: true },
   // Tres formatos, tres acciones (RF-26). Un botón «exportar» que abre un menú

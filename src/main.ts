@@ -270,12 +270,47 @@ function boot(): void {
       case 'followFunds':
         toggleTaint();
         break;
-      // Fase 6.2: clustering. Se declara en el registro para que aparezca en la
-      // palette con su atajo desde ya, pero avisa en vez de fingir que funciona.
       case 'cluster':
-        toasts.show({ message: `${t(actionName(id))} — Fase 6`, timeout: 2500 });
+        groupOrUngroup();
         break;
     }
+  }
+
+  /* ---------- Clustering de direcciones (RF-19) ---------- */
+
+  /**
+   * La misma acción agrupa y desagrupa, según lo que haya seleccionado.
+   *
+   * Con un cluster seleccionado, `g` lo deshace; si no, agrupa lo que CIOH
+   * encuentre. Dos acciones distintas para «hacer» y «deshacer esto concreto»
+   * obligarían a recordar cuál es cuál, y la segunda solo tiene sentido con un
+   * cluster delante.
+   */
+  function groupOrUngroup(): void {
+    const state = app.store.getState();
+    const selected = state.selection.at(-1);
+
+    if (selected !== undefined && state.graph.nodes[selected]?.kind === 'cluster') {
+      app.ungroup(selected);
+      toasts.show({ message: t('cluster.ungrouped'), timeout: 2500 });
+
+      return;
+    }
+
+    const created = app.cluster();
+
+    if (created === 0) {
+      toasts.show({ message: t('cluster.none'), timeout: 5000 });
+
+      return;
+    }
+
+    toasts.show({
+      message: tPlural(created, 'cluster.created.one', 'cluster.created.other', {
+        count: formatNumber(created),
+      }),
+      timeout: 4000,
+    });
   }
 
   /* ---------- Seguimiento de flujo de fondos (RF-18) ---------- */
@@ -601,8 +636,5 @@ function nextColor(current: string | undefined): string {
 
   return COLOR_CYCLE[(index + 1) % COLOR_CYCLE.length] ?? COLOR_CYCLE[0];
 }
-
-const actionName = (id: ActionId) =>
-  ACTIONS.find((action) => action.id === id)?.i18nKey ?? 'app.name';
 
 boot();

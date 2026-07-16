@@ -7,7 +7,8 @@ import {
   setColor,
   setNote,
   deleteSelection,
-  groupCluster,
+  createCluster,
+  removeCluster,
   setSelection,
 } from '@/core/commands';
 import { txNodeId, addressNodeId, edgesOf, nodesOf } from '@/core/graph-model';
@@ -181,10 +182,10 @@ describe('DeleteSelection (RF-12)', () => {
   });
 });
 
-describe('GroupCluster (RF-19)', () => {
+describe('CreateCluster / RemoveCluster (RF-19)', () => {
   it('do() crea el cluster y mete dentro a los nodos', () => {
     const ids = [addressNodeId('C'), addressNodeId('D')];
-    const state = groupCluster('c1', ids, 'Exchange').apply(loaded());
+    const state = createCluster('cluster:c1', ids, 'Exchange').apply(loaded());
 
     expect(state.graph.nodes['cluster:c1']?.kind).toBe('cluster');
     expect(state.graph.nodes['cluster:c1']?.label).toBe('Exchange');
@@ -192,7 +193,17 @@ describe('GroupCluster (RF-19)', () => {
   });
 
   it('undo() restaura el estado exacto anterior', () => {
-    expectSymmetric(loaded(), groupCluster('c1', [addressNodeId('C')], 'Exchange'));
+    expectSymmetric(
+      loaded(),
+      createCluster('cluster:c1', [addressNodeId('C'), addressNodeId('D')]),
+    );
+  });
+
+  it('quitar el cluster libera a los suyos y undo() lo devuelve', () => {
+    const ids = [addressNodeId('C'), addressNodeId('D')];
+    const grouped = createCluster('cluster:c1', ids, 'Exchange').apply(loaded());
+
+    expectSymmetric(grouped, removeCluster('cluster:c1'));
   });
 });
 
@@ -216,7 +227,8 @@ describe('todos los comandos son puros', () => {
       setColor(TX_ID, '#fff'),
       setNote(TX_ID, 'n'),
       setSelection([TX_ID]),
-      groupCluster('c1', [TX_ID], 'g'),
+      createCluster('cluster:c1', [TX_ID, addressNodeId('C')], 'g'),
+      removeCluster('cluster:c1'),
       deleteSelection([TX_ID]),
     ];
 

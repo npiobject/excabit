@@ -23,7 +23,7 @@
   "action.select": "Seleccionar",
   "action.boxSelect": "Selección por área",
   "action.followFunds": "Seguir fondos",
-  "action.cluster": "Agrupar en cluster",
+  "action.cluster": "Agrupar direcciones por dueño (H-09)",
   "action.grid": "Cuadrícula",
   "action.export": "Exportar PNG",
   "action.save": "Guardar investigación",
@@ -144,5 +144,9 @@
   "taint.nodes.one": "{count} nodo",
   "taint.nodes.other": "{count} nodos",
   "taint.hops.one": "{count} salto",
-  "taint.hops.other": "{count} saltos"
+  "taint.hops.other": "{count} saltos",
+  "cluster.created.one": "{count} monedero detectado: direcciones que firman juntas (H-09)",
+  "cluster.created.other": "{count} monederos detectados: direcciones que firman juntas (H-09)",
+  "cluster.none": "No hay direcciones que agrupar: harían falta transacciones con varias entradas conocidas. Expande el grafo y vuelve a probar.",
+  "cluster.ungrouped": "Agrupación deshecha. Las direcciones siguen ahí."
 }

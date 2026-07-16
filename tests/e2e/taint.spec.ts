@@ -69,7 +69,7 @@ test('RF-18: enseña la suma acumulada y los saltos', async ({ page }) => {
   await expect(page.locator('#statusMessage')).toContainText(/BTC/);
   await expect(page.locator('#statusMessage')).toContainText(/salto/);
   // Con un solo salto pone «1 salto», no «1 saltos» (RF-30).
-  await expect(page.locator('#statusMessage')).not.toContainText(/1 saltos/);
+  await expect(page.locator('#statusMessage')).not.toContainText(/1 saltos/);
   // Y en español los decimales llevan coma, no punto.
   await expect(page.locator('#statusMessage')).toContainText(/0,\d+ BTC/);
 });

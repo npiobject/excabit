@@ -23,17 +23,20 @@ import {
   setSelection,
   setLabel,
   setColor,
+  createCluster,
+  removeCluster,
   deleteSelection,
   type InvestigationState,
   type UndoableCommand,
 } from './core/commands';
-import { txNodeId, type Graph } from './core/graph-model';
+import { addressNodeId, txNodeId, type Graph } from './core/graph-model';
 import { normalizeTxid } from './core/validators';
 import { CyAdapter } from './graph/cy-adapter';
 import { layoutRadial } from './graph/layout-radial';
 import type { NormalizedTx, Txid } from './core/types';
 import { t, type MessageKey } from './i18n/i18n';
 import { analyzeTx } from './analysis/score';
+import { findClusters } from './analysis/clustering';
 
 export interface AppOptions {
   container: HTMLElement;
@@ -258,6 +261,30 @@ export class App {
   /** Colorea un nodo (RF-11). */
   setColor(nodeId: string, color: string): void {
     this.dispatch(setColor(nodeId, color));
+  }
+
+  /**
+   * Agrupa direcciones por dueño presunto (RF-19). Devuelve cuántos grupos salen.
+   *
+   * Si un cluster ya existe se deja como está: puede llevar el nombre que le puso
+   * el usuario, y rehacerlo lo perdería. La hipótesis no cambia por volver a
+   * calcularla.
+   */
+  cluster(): number {
+    const state = this.store.getState();
+    const clusters = findClusters(state.graph);
+    const nuevos = clusters.filter((cluster) => state.graph.nodes[cluster.id] === undefined);
+
+    for (const cluster of nuevos) {
+      this.dispatch(createCluster(cluster.id, cluster.addresses.map(addressNodeId)));
+    }
+
+    return nuevos.length;
+  }
+
+  /** Deshace una agrupación (RF-19). Las direcciones se quedan. */
+  ungroup(clusterId: string): void {
+    this.dispatch(removeCluster(clusterId));
   }
 
   clearSelection(): void {

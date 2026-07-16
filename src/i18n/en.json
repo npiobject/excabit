@@ -23,7 +23,7 @@
   "action.select": "Select",
   "action.boxSelect": "Box select",
   "action.followFunds": "Follow funds",
-  "action.cluster": "Group into cluster",
+  "action.cluster": "Group addresses by owner (H-09)",
   "action.grid": "Grid",
   "action.export": "Export PNG",
   "action.save": "Save investigation",
@@ -144,5 +144,9 @@
   "taint.nodes.one": "{count} node",
   "taint.nodes.other": "{count} nodes",
   "taint.hops.one": "{count} hop",
-  "taint.hops.other": "{count} hops"
+  "taint.hops.other": "{count} hops",
+  "cluster.created.one": "{count} wallet detected: addresses that sign together (H-09)",
+  "cluster.created.other": "{count} wallets detected: addresses that sign together (H-09)",
+  "cluster.none": "There are no addresses to group: that needs transactions with several known inputs. Expand the graph and try again.",
+  "cluster.ungrouped": "Grouping undone. The addresses are still there."
 }

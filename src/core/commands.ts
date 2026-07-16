@@ -121,6 +121,71 @@ export function setSelection(ids: readonly string[]): UndoableCommand {
 }
 
 /**
+ * Agrupa direcciones en un cluster (RF-19).
+ *
+ * El cluster es un nodo más, de `kind: 'cluster'`, y las direcciones pasan a ser
+ * sus hijas (`parent`). Que sea un nodo y no una estructura aparte es lo que le
+ * da gratis todo lo demás: se etiqueta con RF-10, se colorea con RF-11, se
+ * guarda con RF-21 y se deshace como cualquier otro cambio.
+ *
+ * Se coloca en el centro de sus hijas: un compound node abarca a los suyos, y
+ * dejarlo en (0,0) lo mandaría lejos del grupo que representa.
+ */
+export function createCluster(
+  id: string,
+  members: readonly string[],
+  label?: string,
+): UndoableCommand {
+  return reversible('CreateCluster', (state) => {
+    const inside = members
+      .map((member) => state.graph.nodes[member])
+      .filter((node): node is GraphNode => node !== undefined);
+    // Agrupar una cosa sola no agrupa nada.
+    if (inside.length < 2) return state;
+
+    const x = inside.reduce((total, node) => total + node.x, 0) / inside.length;
+    const y = inside.reduce((total, node) => total + node.y, 0) / inside.length;
+
+    const nodes: Record<string, GraphNode> = {
+      ...state.graph.nodes,
+      [id]: { id, kind: 'cluster', x, y, placed: true, ...(label === undefined ? {} : { label }) },
+    };
+    for (const node of inside) nodes[node.id] = { ...node, parent: id };
+
+    return { ...state, graph: { ...state.graph, nodes } };
+  });
+}
+
+/**
+ * Deshace una agrupación (RF-19): quita el cluster y libera a sus hijas.
+ *
+ * Las direcciones no se borran nunca — la agrupación es una hipótesis sobre
+ * quién manda, no un cambio en los datos. Deshacerla devuelve las direcciones,
+ * no las pierde.
+ */
+export function removeCluster(id: string): UndoableCommand {
+  return reversible('RemoveCluster', (state) => {
+    if (state.graph.nodes[id]?.kind !== 'cluster') return state;
+
+    const nodes: Record<string, GraphNode> = {};
+    for (const [nodeId, node] of Object.entries(state.graph.nodes)) {
+      if (nodeId === id) continue;
+
+      if (node.parent === id) {
+        const { parent: _drop, ...orphan } = node;
+        nodes[nodeId] = orphan;
+      } else nodes[nodeId] = node;
+    }
+
+    return {
+      ...state,
+      graph: { ...state.graph, nodes },
+      selection: state.selection.filter((selected) => selected !== id),
+    };
+  });
+}
+
+/**
  * Elimina nodos y sus aristas huérfanas (RF-12).
  *
  * Dejar una arista apuntando a un nodo que ya no existe corrompería el grafo:
@@ -146,28 +211,5 @@ export function deleteSelection(ids: readonly string[]): UndoableCommand {
       graph: { nodes, edges },
       selection: state.selection.filter((id) => !doomed.has(id)),
     };
-  });
-}
-
-/** Agrupa nodos en un cluster (RF-19, compound node). */
-export function groupCluster(
-  clusterId: string,
-  ids: readonly string[],
-  label: string,
-): UndoableCommand {
-  const id = `cluster:${clusterId}`;
-
-  return reversible('GroupCluster', (state) => {
-    const nodes: Record<string, GraphNode> = {
-      ...state.graph.nodes,
-      [id]: { id, kind: 'cluster', x: 0, y: 0, label },
-    };
-
-    for (const child of ids) {
-      const node = nodes[child];
-      if (node !== undefined) nodes[child] = { ...node, parent: id };
-    }
-
-    return { ...state, graph: { ...state.graph, nodes } };
   });
 }

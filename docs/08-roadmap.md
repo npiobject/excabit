@@ -380,7 +380,7 @@ registrara los atajos: `goto` resuelve con el HTML, no con la app viva.
 
 Orden propuesto por valor/esfuerzo:
 1. Seguimiento de flujo de fondos (RF-18). ✅ **entregada el 2026-07-16** (ver abajo)
-2. Clustering de direcciones (RF-19).
+2. Clustering de direcciones (RF-19). ✅ **entregada el 2026-07-16** (ver abajo)
 3. Expansión inteligente paginada (RF-31).
 4. Línea temporal (P2) y multi-red (RF-04).
 5. Export avanzado + enlace permanente (RF-24).
@@ -448,6 +448,58 @@ una herramienta que sirve para decir cuánto dinero se movió, eso no es estilo.
 decimal: la regla la sabe la plataforma. Las claves se pasan enteras
 (`taint.hops.one`, `taint.hops.other`) y no componiendo `${base}.one`, para que
 sigan siendo `MessageKey` y el test que caza claves que faltan en los json las vea.
+
+### 6.2 — Clustering de direcciones (RF-19), entregada el 2026-07-16
+
+24 tests unit + 8 E2E. 527 tests unit en total.
+
+H-09 (CIOH) ya decía qué direcciones firman juntas **una** tx. Lo que faltaba —y
+es lo que hace útil la heurística— es **unir los grupos transitivamente**: si una
+tx enlaza A con B y otra enlaza B con C, las tres son del mismo dueño aunque A y
+C no hayan coincidido jamás. Es lo que convierte direcciones sueltas en «esto es
+un monedero» (Meiklejohn et al.).
+
+- **Toda la fuerza está en no equivocarse.** La transitividad es potente y por eso
+  es peligrosa: un solo falso positivo funde dos monederos **para siempre**. Si
+  una CoinJoin colara, uniría a desconocidos y el error se propagaría a todo lo
+  demás. Por eso la única fuente es `commonInputOwnership`, con su descarte de
+  CoinJoin ya calibrado con datos reales (docs/04), en vez de reimplementar aquí
+  el criterio. Hay un test para exactamente ese escenario.
+- **El cluster es un nodo, no una estructura aparte.** Siendo `kind: 'cluster'` le
+  sale gratis todo lo demás: se nombra con RF-10, se colorea con RF-11, se guarda
+  con RF-21 y se deshace como cualquier otro cambio.
+- **El id se deriva de la dirección menor del grupo**, no de un contador ni del
+  orden de aparición: acaba en el fichero guardado y en el historial de undo, y un
+  id que cambiara entre ejecuciones haría que una investigación guardada no se
+  pudiera reabrir igual.
+- **Cada cluster lleva su evidencia** (las txs que lo justifican). Sin eso el
+  usuario ve una caja alrededor de tres direcciones y tiene que creérselo — lo
+  contrario de la propuesta de valor nº 3 (docs/00 §3).
+- **Recalcular no rehace lo que ya existe**: un cluster puede llevar el nombre que
+  le puso el usuario y rehacerlo lo perdería. La hipótesis no cambia por volverla
+  a calcular.
+- **Deshacer no borra direcciones**: agrupar es una hipótesis sobre quién manda,
+  no un cambio en los datos.
+
+**Corrección al registro de acciones**: `cluster` estaba declarada con
+`needsSelection: true` desde la Fase 4, cuando aún no existía. Es al revés: en
+RF-19 quien agrupa es **la heurística**, no el usuario, y no hay nada que
+seleccionar antes de saber qué direcciones firman juntas — eso es justo lo que la
+acción viene a averiguar. Con un cluster seleccionado, la misma tecla lo deshace.
+
+**Código muerto eliminado: `groupCluster`.** La Fase 3 dejó un comando de agrupar
+anticipando RF-19, con sus tests, pero sin cablear a nada. Tenía los defectos que
+se ven al usarlo de verdad: colocaba el cluster en `(0,0)` —lejos del grupo que
+representa, porque un compound node abarca a los suyos—, exigía nombre y no tenía
+pareja para desagrupar. Se sustituye por `createCluster`/`removeCluster` y **se
+borra**: dos comandos para lo mismo es exactamente la enfermedad de BUG-006 (dos
+clasificadores de direcciones incompatibles). Sus tests se migraron, no se tiraron.
+
+**Bug de UX cazado por un test de la palette**: la acción se llamó primero
+«Agrupar direcciones (o deshacer)», y buscar «deshacer» en la palette pasó a
+devolver dos cosas, con Ctrl+Z ya no en primer lugar. El test de la Fase 4 lo vio.
+Se renombró a «Agrupar direcciones por dueño (H-09)»: dice lo que hace y no pisa
+la palabra de otra acción.
 
 ## Riesgos y mitigaciones
 
