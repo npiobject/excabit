@@ -331,6 +331,21 @@ describe('getAddress', () => {
   });
 });
 
+/**
+ * Paginación (RF-31).
+ *
+ * **Esplora usa DOS tamaños de página distintos**, y este test lo daba por
+ * bueno con uno solo:
+ *
+ * - `/address/:addr/txs` (la primera) devuelve hasta **50**.
+ * - `/address/:addr/txs/chain/:last_seen` (las siguientes), hasta **25**.
+ *
+ * Comprobado contra mempool.space el 2026-07-16 con una dirección de 687 txs.
+ * Dar por hecho que las dos eran de 25 hacía que la primera página nunca
+ * detectara que había más: una dirección con 687 txs cargaba 50 y decía que ya
+ * estaban todas. Los tests no lo vieron porque el mock servía 25 — la cifra que
+ * habíamos supuesto, no la que devuelve la API.
+ */
 describe('getAddressTxs — paginación (RF-31)', () => {
   const page = (n: number) =>
     Array.from({ length: n }, (_, i) => ({
@@ -338,7 +353,22 @@ describe('getAddressTxs — paginación (RF-31)', () => {
       txid: i.toString(16).padStart(64, '0'),
     }));
 
-  it('primera página: 25 txs y cursor al último txid', async () => {
+  it('primera página: 50 txs y cursor al último txid', async () => {
+    server.use(
+      http.get('https://mempool.space/api/address/:addr/txs', () => HttpResponse.json(page(50))),
+    );
+
+    const result = await makeProvider().getAddressTxs(ADDR);
+
+    expect(result.items).toHaveLength(50);
+    // Lo que importa: que sepa que hay más. Con el tamaño equivocado, `cursor`
+    // salía `undefined` y el usuario se quedaba sin las otras 637.
+    expect(result.cursor).toBe(page(50)[49]?.txid);
+  });
+
+  it('una primera página de 25 NO es el final: la de verdad son 50', async () => {
+    // 25 es un tamaño de página que Esplora nunca devuelve en `/txs`: si llegan
+    // 25, es que la dirección tiene 25 y ya está.
     server.use(
       http.get('https://mempool.space/api/address/:addr/txs', () => HttpResponse.json(page(25))),
     );
@@ -346,7 +376,7 @@ describe('getAddressTxs — paginación (RF-31)', () => {
     const result = await makeProvider().getAddressTxs(ADDR);
 
     expect(result.items).toHaveLength(25);
-    expect(result.cursor).toBe(page(25)[24]?.txid);
+    expect(result.cursor).toBeUndefined();
   });
 
   it('página incompleta → sin cursor (no hay más)', async () => {

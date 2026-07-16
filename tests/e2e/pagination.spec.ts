@@ -13,7 +13,17 @@ import { skipTour, useLocale } from './helpers/setup';
 
 /** Dirección real de los fixtures: la reutilizada de `85e72c08`. */
 const ADDRESS = '122BNoyhmuUt9G9mdEm3mN4nb73c1UgNKt';
-const PAGE_SIZE = 25;
+
+/**
+ * Los dos tamaños de página de Esplora, comprobados contra mempool.space.
+ *
+ * **No son el mismo**, y el mock de este fichero servía 25 en las dos — la cifra
+ * que habíamos supuesto. Por eso estos tests pasaban mientras una dirección de
+ * 687 txs cargaba 50 en producción y afirmaba que ya no había más. Un mock que
+ * miente da tests que mienten.
+ */
+const FIRST_PAGE = 50;
+const CHAIN_PAGE = 25;
 const TOTAL = 5000;
 
 /** Una tx sintética, distinta en cada índice. */
@@ -61,9 +71,9 @@ async function mockBigAddress(page: Page): Promise<{ requests: () => number }> {
     const url = route.request().url();
     const cursor = /\/chain\/([0-9a-f]{64})$/.exec(url)?.[1];
     const from = cursor === undefined ? 0 : parseInt(cursor, 16) + 1;
-    const items = Array.from({ length: Math.min(PAGE_SIZE, TOTAL - from) }, (_, i) =>
-      txAt(from + i),
-    );
+    // Como Esplora de verdad: 50 la primera, 25 las siguientes.
+    const size = cursor === undefined ? FIRST_PAGE : CHAIN_PAGE;
+    const items = Array.from({ length: Math.min(size, TOTAL - from) }, (_, i) => txAt(from + i));
 
     await route.fulfill({ json: items });
   });
@@ -105,15 +115,15 @@ test('RF-02: buscar una dirección carga sus transacciones', async ({ page }) =>
   ).toBe(true);
 });
 
-test('RF-31: una dirección con 5.000 txs trae 25, no 5.000', async ({ page }) => {
+test('RF-31: una dirección con 5.000 txs trae 50, no 5.000', async ({ page }) => {
   const mock = await mockBigAddress(page);
   await open(page);
 
   await page.fill('#search', ADDRESS);
   await page.click('#searchBtn');
 
-  await expect.poll(() => txCount(page)).toBe(PAGE_SIZE);
-  // Una sola petición: traerlas todas serían 200. El «Multi Tx» del legacy
+  await expect.poll(() => txCount(page)).toBe(FIRST_PAGE);
+  // Una sola petición: traerlas todas serían 100. El «Multi Tx» del legacy
   // murió intentando esto (BUG-016).
   expect(mock.requests()).toBe(1);
 });
@@ -124,13 +134,13 @@ test('RF-31: ofrece paginar, y al aceptar trae 25 más', async ({ page }) => {
 
   await page.fill('#search', ADDRESS);
   await page.click('#searchBtn');
-  await expect.poll(() => txCount(page)).toBe(PAGE_SIZE);
+  await expect.poll(() => txCount(page)).toBe(FIRST_PAGE);
 
   // «Se ofrece paginar» (RF-31), literalmente: un botón que lo dice.
   await expect(page.locator('#toasts')).toContainText(/Hay más/);
   await page.click('.toastAction');
 
-  await expect.poll(() => txCount(page)).toBe(PAGE_SIZE * 2);
+  await expect.poll(() => txCount(page)).toBe(FIRST_PAGE + CHAIN_PAGE);
 });
 
 test('RF-31: la oferta se repite mientras queden', async ({ page }) => {
@@ -139,11 +149,11 @@ test('RF-31: la oferta se repite mientras queden', async ({ page }) => {
 
   await page.fill('#search', ADDRESS);
   await page.click('#searchBtn');
-  await expect.poll(() => txCount(page)).toBe(PAGE_SIZE);
+  await expect.poll(() => txCount(page)).toBe(FIRST_PAGE);
 
-  for (let i = 2; i <= 4; i++) {
+  for (let i = 1; i <= 3; i++) {
     await page.locator('.toastAction').first().click();
-    await expect.poll(() => txCount(page)).toBe(PAGE_SIZE * i);
+    await expect.poll(() => txCount(page)).toBe(FIRST_PAGE + CHAIN_PAGE * i);
   }
 });
 
@@ -168,7 +178,7 @@ test('RF-31: la UI no se congela mientras carga', async ({ page }) => {
 
   await page.fill('#search', ADDRESS);
   await page.click('#searchBtn');
-  await expect.poll(() => txCount(page)).toBe(PAGE_SIZE);
+  await expect.poll(() => txCount(page)).toBe(FIRST_PAGE);
 
   // El grafo responde a la vez que se pagina: se pide otra página y, sin
   // esperarla, se usa la app. Si el hilo estuviera bloqueado, esto no correría.
@@ -181,7 +191,7 @@ test('RF-31: la UI no se congela mientras carga', async ({ page }) => {
   });
 
   expect(zoomed).toBe(true);
-  await expect.poll(() => txCount(page)).toBe(PAGE_SIZE * 2);
+  await expect.poll(() => txCount(page)).toBe(FIRST_PAGE + CHAIN_PAGE);
 });
 
 test('una dirección inválida se rechaza inline, como un txid inválido (RF-01)', async ({

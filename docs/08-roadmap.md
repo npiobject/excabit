@@ -555,6 +555,31 @@ crece: cuadrático, y con la cuarta página la UI se arrastra. Se agrupó en un
 test bajó a 1,6 s. De paso arregla el undo, que ahora deshace *la página* y no
 veinticinco veces la misma tecla.
 
+### 6.3 bis — Bug de paginación encontrado con datos reales (2026-07-16)
+
+**Una dirección con 687 transacciones cargaba 50 y afirmaba que ya estaban todas.**
+RF-31 roto en producción, de la forma más difícil de ver: sin error, sin aviso y
+con unos datos que parecen completos.
+
+**Causa: Esplora tiene DOS tamaños de página y dimos por hecho que era uno.**
+
+| Petición | Devuelve |
+|---|---|
+| `/address/:addr/txs` (la primera) | **50** |
+| `/address/:addr/txs/chain/:last_seen` (las siguientes) | **25** |
+
+El código comprobaba `items.length === 25` para saber si había más. En la primera
+página llegan 50, `50 === 25` es falso, y la app concluía que no quedaba nada.
+
+**Por qué no lo vieron los tests: el mock servía 25.** La cifra que habíamos
+supuesto, no la que devuelve la API. Es la tercera vez en el proyecto que un
+fixture inventado prueba lo que creíamos en vez de lo que hay — como los colores
+del legacy en la Fase 5. Ahora el mock sirve 50/25 como Esplora, y el test de
+integración lo documenta con la fecha en que se comprobó.
+
+**Salió explorando direcciones reales para buscar ejemplos bonitos**, no de los
+tests. La suite entera estaba en verde.
+
 ### 6.4 — Multi-red (RF-04) y línea temporal (RF-35), entregada el 2026-07-16
 
 546 tests unit + 122 E2E.

@@ -27,8 +27,21 @@ import type { EsploraAddress, EsploraOutspend, EsploraTx } from './esplora-types
 
 const PUBLIC_HOST = 'https://mempool.space';
 
-/** Tamaño de página de Esplora en `/address/:addr/txs`. */
-const ESPLORA_PAGE_SIZE = 25;
+/**
+ * Tamaños de página de Esplora. **Son dos, y distintos.**
+ *
+ * - `/address/:addr/txs` devuelve hasta **50**.
+ * - `/address/:addr/txs/chain/:last_seen` devuelve hasta **25**.
+ *
+ * Comprobado contra mempool.space el 2026-07-16 con una dirección de 687 txs.
+ * Suponer que las dos eran de 25 tenía una consecuencia fea y silenciosa: la
+ * primera página traía 50, `50 === 25` daba falso, y la app concluía que no
+ * había más — una dirección con 687 transacciones cargaba 50 y se quedaba tan
+ * ancha. RF-31 roto de la forma más difícil de ver: sin error, sin aviso y con
+ * datos que parecen completos.
+ */
+const ESPLORA_FIRST_PAGE_SIZE = 50;
+const ESPLORA_CHAIN_PAGE_SIZE = 25;
 
 const NETWORK_PATH: Record<Network, string> = {
   mainnet: '/api',
@@ -188,9 +201,11 @@ export class MempoolProvider implements ApiClient {
 
     const items = raw.map(normalizeTx);
     // Esplora no da cursor: se pagina con el último txid visto. Si la página
-    // viene incompleta, es la última.
+    // viene incompleta, es la última — pero «completa» mide distinto según qué
+    // página sea (ver `ESPLORA_FIRST_PAGE_SIZE`).
+    const pageSize = cursor === undefined ? ESPLORA_FIRST_PAGE_SIZE : ESPLORA_CHAIN_PAGE_SIZE;
     const last = items.at(-1);
-    const hasMore = items.length === ESPLORA_PAGE_SIZE && last !== undefined;
+    const hasMore = items.length === pageSize && last !== undefined;
 
     return hasMore ? { items, cursor: last.txid } : { items };
   }
