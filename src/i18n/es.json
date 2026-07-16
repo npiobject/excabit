@@ -1,11 +1,11 @@
 {
   "app.name": "excabit",
   "app.tagline": "Explorador gráfico de la cadena de Bitcoin",
-  "search.placeholder": "Pega un txid (64 caracteres hex) y pulsa Enter",
+  "search.placeholder": "Pega un txid o una dirección y pulsa Enter",
   "search.label": "Txid o dirección a explorar",
   "search.button": "Buscar",
   "search.example": "Ejemplo",
-  "search.invalid": "Introduce un txid válido de 64 caracteres hexadecimales.",
+  "search.invalid": "Eso no es un txid (64 caracteres hexadecimales) ni una dirección de Bitcoin.",
   "network.label": "Red",
   "network.mainnet": "mainnet",
   "network.testnet": "testnet",
@@ -148,5 +148,7 @@
   "cluster.created.one": "{count} monedero detectado: direcciones que firman juntas (H-09)",
   "cluster.created.other": "{count} monederos detectados: direcciones que firman juntas (H-09)",
   "cluster.none": "No hay direcciones que agrupar: harían falta transacciones con varias entradas conocidas. Expande el grafo y vuelve a probar.",
-  "cluster.ungrouped": "Agrupación deshecha. Las direcciones siguen ahí."
+  "cluster.ungrouped": "Agrupación deshecha. Las direcciones siguen ahí.",
+  "page.more": "Cargadas las {loaded} transacciones más recientes. Hay más.",
+  "page.loadMore": "Cargar 25 más"
 }

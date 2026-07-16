@@ -19,6 +19,7 @@ import { History } from './core/undo';
 import {
   initialInvestigation,
   addTxData,
+  addTxsData,
   moveNode,
   setSelection,
   setLabel,
@@ -30,10 +31,10 @@ import {
   type UndoableCommand,
 } from './core/commands';
 import { addressNodeId, txNodeId, type Graph } from './core/graph-model';
-import { normalizeTxid } from './core/validators';
+import { detectSearchKind, normalizeTxid } from './core/validators';
 import { CyAdapter } from './graph/cy-adapter';
 import { layoutRadial } from './graph/layout-radial';
-import type { NormalizedTx, Txid } from './core/types';
+import type { AddressId, NormalizedTx, Txid } from './core/types';
 import { t, type MessageKey } from './i18n/i18n';
 import { analyzeTx } from './analysis/score';
 import { findClusters } from './analysis/clustering';
@@ -87,6 +88,15 @@ export class App {
   private readonly onInvalidInput: (message: string) => void;
   private readonly onStatus: (status: 'idle' | 'loading') => void;
   private rootTxid: Txid | undefined;
+  /**
+   * Paginación por dirección (RF-31): cuántas txs se han traído y por dónde
+   * seguir.
+   *
+   * Vive aquí y no en el store a propósito: es estado de la sesión, no de la
+   * investigación. Un cursor de Esplora guardado en el fichero caducaría, y al
+   * reabrirlo un año después apuntaría a un sitio que ya no significa nada.
+   */
+  private readonly pages = new Map<AddressId, { loaded: number; cursor?: string }>();
 
   constructor(options: AppOptions) {
     this.client = options.client;
@@ -138,17 +148,118 @@ export class App {
     this.client = client;
   }
 
-  /** Carga la tx y la coloca en el centro del radial (RF-01, RF-05). */
+  /**
+   * Busca lo que sea que hayan escrito (RF-01, RF-02).
+   *
+   * La caja es una sola porque el usuario no tiene por qué clasificar lo que pega:
+   * un txid y una dirección no se pueden confundir entre sí (64 hex no encaja en
+   * base58 ni en bech32), así que la app lo averigua.
+   */
   async search(input: string): Promise<void> {
-    const txid = normalizeTxid(input);
-    if (txid === null) {
-      // Inline junto al input, nunca un popup (RF-01, BUG-003).
-      this.onInvalidInput(t('search.invalid'));
-      return;
+    switch (detectSearchKind(input)) {
+      case 'txid': {
+        const txid = normalizeTxid(input);
+        if (txid === null) break;
+
+        await this.load(txid, { asRoot: true });
+        this.adapter.fit();
+
+        return;
+      }
+      case 'address':
+        await this.searchAddress(input.trim());
+
+        return;
+      default:
+        break;
     }
 
-    await this.load(txid, { asRoot: true });
+    // Inline junto al input, nunca un popup (RF-01, BUG-003).
+    this.onInvalidInput(t('search.invalid'));
+  }
+
+  /**
+   * Carga las transacciones de una dirección, por páginas (RF-02, RF-31).
+   *
+   * **Nunca se traen todas.** Una dirección de un exchange tiene decenas de miles
+   * de txs: pedirlas enteras son cientos de peticiones y un grafo que no cabe en
+   * la pantalla ni en la memoria. Se traen las 25 más recientes y se ofrece
+   * seguir. Es el sustituto del «Multi Tx» del legacy (BUG-016), que se quedó a
+   * medias precisamente porque intentaba resolver esto de una vez.
+   */
+  async searchAddress(address: AddressId): Promise<void> {
+    this.pages.delete(address);
+    const added = await this.loadAddressPage(address);
+    if (added === null) return;
+
     this.adapter.fit();
+  }
+
+  /** Trae la siguiente página de una dirección ya cargada (RF-31). */
+  async loadMore(address: AddressId): Promise<void> {
+    if (this.pages.get(address)?.cursor === undefined) return;
+
+    await this.loadAddressPage(address);
+  }
+
+  /** ¿Quedan más txs por traer de esta dirección? Lo pregunta la UI (RF-31). */
+  pageInfo(address: AddressId): { loaded: number; hasMore: boolean } | undefined {
+    const page = this.pages.get(address);
+    if (page === undefined) return undefined;
+
+    return { loaded: page.loaded, hasMore: page.cursor !== undefined };
+  }
+
+  private async loadAddressPage(address: AddressId): Promise<number | null> {
+    this.onStatus('loading');
+
+    try {
+      const known = this.pages.get(address);
+      const page = await this.client.getAddressTxs(
+        address,
+        ...(known?.cursor === undefined ? [] : [known.cursor]),
+      );
+
+      // Una página, un comando: 25 despachos serían 25 sincronizaciones del
+      // grafo entero con el motor (RF-31 pide no congelar la UI).
+      this.dispatch(addTxsData(page.items));
+
+      this.pages.set(address, {
+        loaded: (known?.loaded ?? 0) + page.items.length,
+        ...(page.cursor === undefined ? {} : { cursor: page.cursor }),
+      });
+
+      /*
+       * Dos vueltas, y las dos hacen falta.
+       *
+       * La primera coloca las txs alrededor de la dirección. La segunda deja que
+       * cada tx coloque **lo suyo** (las direcciones a las que paga) alrededor de
+       * donde ha caído: son vecinas de la tx, no de la dirección buscada, así que
+       * el primer radial ni las mira y se quedarían las 25 apiladas en el origen.
+       * Es el mismo fallo que las vecinas de la Fase 3, y se ve igual: el
+       * contador dice «51 nodos» y en pantalla hay uno.
+       *
+       * Se encadenan sobre el mismo grafo y se despacha **una vez**, por lo mismo
+       * de arriba.
+       */
+      let graph = layoutRadial(this.store.getState().graph, addressNodeId(address), {
+        center: { x: 0, y: 0 },
+      });
+      for (const tx of page.items) {
+        // La tx ya tiene sitio del paso anterior; `layoutRadial` respeta a los
+        // `placed` y orbita alrededor de donde están.
+        graph = layoutRadial(graph, txNodeId(tx.txid), { center: { x: 0, y: 0 } });
+      }
+      this.store.dispatch({ type: 'Layout', apply: (current) => ({ ...current, graph }) });
+
+      return page.items.length;
+    } catch (error) {
+      this.onError(t(messageKeyFor(error)));
+
+      return null;
+    } finally {
+      this.onStatus('idle');
+    }
   }
 
   private async load(
@@ -193,7 +304,12 @@ export class App {
 
   /** Coloca el radial de una tx, respetando lo que ya tenía sitio. */
   private relayout(txid: Txid, center: { x: number; y: number }): void {
-    const graph: Graph = layoutRadial(this.store.getState().graph, txNodeId(txid), { center });
+    this.relayoutAround(txNodeId(txid), center);
+  }
+
+  /** Ídem, para cualquier nodo: el centro puede ser una tx o una dirección. */
+  private relayoutAround(nodeId: string, center: { x: number; y: number }): void {
+    const graph: Graph = layoutRadial(this.store.getState().graph, nodeId, { center });
 
     this.store.dispatch({ type: 'Layout', apply: (current) => ({ ...current, graph }) });
   }

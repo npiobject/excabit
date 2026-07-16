@@ -12,6 +12,14 @@ export interface ToastOptions {
   message: string;
   /** Si se pasa, el toast ofrece «Reintentar» y no se va solo. */
   onRetry?: () => void;
+  /**
+   * Acción con nombre propio, para lo que no es reintentar.
+   *
+   * La necesita RF-31: «se ofrece paginar» es ofrecer *cargar más*, y un botón
+   * que ponga «Reintentar» no ofrece nada. Se generaliza en vez de añadir un
+   * segundo componente parecido.
+   */
+  action?: { label: string; onClick: () => void };
   /** ms hasta desaparecer. Los que tienen acción esperan al usuario. */
   timeout?: number;
 }
@@ -38,15 +46,22 @@ export class Toasts {
       toast.remove();
     };
 
-    if (options.onRetry !== undefined) {
-      const retry = document.createElement('button');
-      retry.type = 'button';
-      retry.textContent = t('toast.retry');
-      retry.addEventListener('click', () => {
+    const action =
+      options.action ??
+      (options.onRetry === undefined
+        ? undefined
+        : { label: t('toast.retry'), onClick: options.onRetry });
+
+    if (action !== undefined) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'toastAction';
+      button.textContent = action.label;
+      button.addEventListener('click', () => {
         dismiss();
-        options.onRetry?.();
+        action.onClick();
       });
-      toast.append(retry);
+      toast.append(button);
     }
 
     const close = document.createElement('button');
@@ -61,7 +76,7 @@ export class Toasts {
 
     // Un toast con acción espera: que se esfume mientras lo lees sería peor
     // que el alert que vino a sustituir.
-    const timeout = options.timeout ?? (options.onRetry === undefined ? DEFAULT_TIMEOUT : 0);
+    const timeout = options.timeout ?? (action === undefined ? DEFAULT_TIMEOUT : 0);
     if (timeout > 0) setTimeout(dismiss, timeout);
   }
 

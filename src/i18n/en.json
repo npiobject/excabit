@@ -1,11 +1,11 @@
 {
   "app.name": "excabit",
   "app.tagline": "Graph explorer for the Bitcoin chain",
-  "search.placeholder": "Paste a txid (64 hex characters) and press Enter",
+  "search.placeholder": "Paste a txid or an address and press Enter",
   "search.label": "Txid or address to explore",
   "search.button": "Search",
   "search.example": "Example",
-  "search.invalid": "Enter a valid 64-character hexadecimal txid.",
+  "search.invalid": "That is neither a txid (64 hex characters) nor a Bitcoin address.",
   "network.label": "Network",
   "network.mainnet": "mainnet",
   "network.testnet": "testnet",
@@ -148,5 +148,7 @@
   "cluster.created.one": "{count} wallet detected: addresses that sign together (H-09)",
   "cluster.created.other": "{count} wallets detected: addresses that sign together (H-09)",
   "cluster.none": "There are no addresses to group: that needs transactions with several known inputs. Expand the graph and try again.",
-  "cluster.ungrouped": "Grouping undone. The addresses are still there."
+  "cluster.ungrouped": "Grouping undone. The addresses are still there.",
+  "page.more": "Loaded the {loaded} most recent transactions. There are more.",
+  "page.loadMore": "Load 25 more"
 }

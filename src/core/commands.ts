@@ -85,6 +85,24 @@ export function addTxData(tx: NormalizedTx): UndoableCommand {
 }
 
 /**
+ * Vuelca una página entera de txs de una vez (RF-31).
+ *
+ * No es azúcar sobre `addTxData`: cada despacho sincroniza el grafo **completo**
+ * con el motor, así que 25 despachos por página cuestan 25 sincronizaciones de un
+ * grafo que además va creciendo — cuadrático, y con la cuarta página la UI ya se
+ * arrastra. Justo lo que RF-31 prohíbe.
+ *
+ * De paso arregla el undo: deshacer una página es deshacer *la página*, no
+ * veinticinco veces la misma tecla.
+ */
+export function addTxsData(txs: readonly NormalizedTx[]): UndoableCommand {
+  return reversible('AddTxsData', (state) => ({
+    ...state,
+    graph: txs.reduce((graph, tx) => addTxToGraph(graph, tx), state.graph),
+  }));
+}
+
+/**
  * Mueve un nodo (RF-07). Solo toca posiciones, nunca datos de dominio.
  * Lo marca como `pinned`: a partir de aquí el layout respeta dónde lo dejó el
  * usuario (RF-06).

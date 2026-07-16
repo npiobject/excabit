@@ -381,7 +381,7 @@ registrara los atajos: `goto` resuelve con el HTML, no con la app viva.
 Orden propuesto por valor/esfuerzo:
 1. Seguimiento de flujo de fondos (RF-18). ✅ **entregada el 2026-07-16** (ver abajo)
 2. Clustering de direcciones (RF-19). ✅ **entregada el 2026-07-16** (ver abajo)
-3. Expansión inteligente paginada (RF-31).
+3. Expansión inteligente paginada (RF-31). ✅ **entregada el 2026-07-16** (ver abajo)
 4. Línea temporal (P2) y multi-red (RF-04).
 5. Export avanzado + enlace permanente (RF-24).
 6. Alertas de patrones, modo presentación, comparador (P3).
@@ -500,6 +500,60 @@ clasificadores de direcciones incompatibles). Sus tests se migraron, no se tirar
 devolver dos cosas, con Ctrl+Z ya no en primer lugar. El test de la Fase 4 lo vio.
 Se renombró a «Agrupar direcciones por dueño (H-09)»: dice lo que hace y no pisa
 la palabra de otra acción.
+
+### 6.3 — Buscar direcciones y paginar (RF-02 + RF-31), entregada el 2026-07-16
+
+531 tests unit + 102 E2E. Mata el «Multi Tx» del legacy (BUG-016), que se quedó
+en `console.log` precisamente por intentar resolver de una vez lo que aquí se
+resuelve por páginas.
+
+**RF-02 no estaba implementado.** `detectSearchKind` existía desde la Fase 1 —con
+sus tests— pero **no lo llamaba nadie**: la caja de búsqueda solo aceptaba txids y
+a una dirección le contestaba «introduce un txid válido». Ahora la caja acepta las
+dos cosas, que es lo natural: un txid y una dirección no se pueden confundir entre
+sí, así que el usuario no tiene por qué clasificar lo que pega.
+
+- **25 por página, una petición.** Una dirección de exchange tiene decenas de
+  miles de txs; traerlas serían cientos de peticiones y un grafo que no cabe en
+  memoria. Verificado con 5.000 txs: llegan 25 con **una** llamada.
+- **La oferta de paginar no caduca.** Es un toast con acción propia y sin
+  temporizador: un aviso de 6 s que se lleva la única forma de seguir cargando
+  sería una trampa. Se generalizó `Toasts` (`onRetry` → `action{label,onClick}`)
+  en vez de añadir un componente parecido: «se ofrece paginar» es ofrecer *cargar
+  más*, y un botón que ponga «Reintentar» no ofrece nada.
+- **El cursor no se guarda en el fichero**: es estado de la sesión, no de la
+  investigación. Un cursor de Esplora guardado caducaría, y al reabrir un año
+  después apuntaría a un sitio que ya no significa nada.
+
+**Bug encontrado mirando la app, otra vez — y es el mismo de la Fase 3.** Al
+buscar una dirección, el contador decía «51 nodos» y en pantalla había **uno**:
+los 51 estaban apilados en (0,0). Los 7 E2E pasaban porque contaban txs, y había
+25.
+
+- **Causa**: `layoutRadial` buscaba los vecinos por el `kind` de la arista
+  (`kind === 'input' && to === rootId`), lo que daba por supuesto que el centro
+  era una **tx**. Con una dirección en el centro no encontraba ninguna —las
+  aristas `input` *salen* de una dirección, no llegan— y no colocaba nada. Ahora
+  se buscan por la **dirección del flujo** (`to === rootId` a la izquierda,
+  `from === rootId` a la derecha): vale para tx y para dirección, significa lo
+  mismo (de dónde vino el dinero, a dónde fue) y de paso el código se simplifica.
+- **Y faltaba una segunda vuelta**: las direcciones a las que paga cada tx son
+  vecinas de la tx, no de la dirección buscada, así que el primer radial ni las
+  mira. Se quedaban 25 apiladas en el origen.
+- **Radio adaptativo**: 25 satélites en un semicírculo de 235 px caen a 28 px unos
+  de otros y un nodo de tx mide 180. El radio se calcula ahora de la cuerda entre
+  vecinos, y la separación mínima **depende del tamaño del satélite** (340 px para
+  una tx, 130 para una dirección): con una sola cifra habría que elegir entre
+  apretar las txs o separar las direcciones mucho más de lo necesario, y esto
+  último cambiaría el radial de siempre (RF-05, el del mock aprobado).
+
+**Problema de rendimiento que RF-31 prohíbe expresamente**, cazado por un E2E que
+tardaba 16,7 s: se despachaba un comando **por tx**, y cada despacho sincroniza el
+grafo **entero** con el motor. 25 sincronizaciones por página sobre un grafo que
+crece: cuadrático, y con la cuarta página la UI se arrastra. Se agrupó en un
+`addTxsData` por página y un solo layout encadenado: **de 50 despachos a 2**, y el
+test bajó a 1,6 s. De paso arregla el undo, que ahora deshace *la página* y no
+veinticinco veces la misma tecla.
 
 ## Riesgos y mitigaciones
 

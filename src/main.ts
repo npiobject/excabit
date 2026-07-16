@@ -187,8 +187,34 @@ function boot(): void {
     searchError.hidden = true;
     searchWrap.classList.remove('invalid');
     search.removeAttribute('aria-invalid');
-    void app.search(value);
+    void app.search(value).then(() => {
+      offerMore(value);
+    });
   };
+
+  /**
+   * «Se ofrece paginar» (RF-31), literalmente.
+   *
+   * Un toast con acción y sin caducidad: la oferta espera al usuario, que quizá
+   * quiera mirar las 25 primeras antes de decidir si quiere 25 más. Al aceptar,
+   * se vuelve a ofrecer mientras queden.
+   */
+  function offerMore(address: string): void {
+    const info = app.pageInfo(address);
+    if (info === undefined || !info.hasMore) return;
+
+    toasts.show({
+      message: t('page.more', { loaded: formatNumber(info.loaded) }),
+      action: {
+        label: t('page.loadMore'),
+        onClick: () => {
+          void app.loadMore(address).then(() => {
+            offerMore(address);
+          });
+        },
+      },
+    });
+  }
 
   function run(id: ActionId): void {
     const state = app.store.getState();
