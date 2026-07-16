@@ -1,0 +1,59 @@
+name: Deploy
+
+# Publica en GitHub Pages lo que hay en `main`.
+#
+# Separado de `ci.yml` a propósito: CI dice si el código está bien, esto lo
+# publica. Mezclarlos haría que un fallo del deploy pareciera un fallo de los
+# tests, y que arreglar el deploy exigiera volver a pasar toda la suite.
+on:
+  push:
+    branches: [main]
+  # Para volver a publicar sin tener que inventarse un commit.
+  workflow_dispatch:
+
+# Los mínimos que necesita `deploy-pages`. `id-token` es para que Pages pueda
+# verificar de dónde viene el artefacto sin un token de larga vida.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un despliegue a la vez. `cancel-in-progress: false` porque cancelar a medias
+# puede dejar Pages sirviendo una versión a medio subir: mejor encolar.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # `npm run build` = `tsc --noEmit && vite build`: no se publica nada que no
+      # compile. El gate de tests vive en ci.yml y corre en el mismo push.
+      - name: Build
+        run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
