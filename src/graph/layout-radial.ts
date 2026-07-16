@@ -33,26 +33,6 @@ export interface LayoutOptions {
 }
 
 /**
- * Radio que necesitan `count` satélites de `kind` para no pisarse.
- *
- * En un semicírculo, `count` satélites quedan a `180/(count+1)` grados unos de
- * otros, y la cuerda entre dos vecinos es `2·r·sin(paso/2)`. Despejando `r` sale
- * el radio mínimo. Sin esto, las 25 txs de una página (RF-31) caerían a 28 px
- * unas de otras sobre el radio por defecto: un amasijo.
- *
- * El radio explícito de `options` manda: si alguien pide uno, es que sabe lo que
- * quiere.
- */
-function radiusFor(count: number, base: number, kind: string): number {
-  if (count < 2) return base;
-
-  const step = toRadians(180 / (count + 1));
-  const separation = MIN_SEPARATION[kind] ?? DEFAULT_SEPARATION;
-
-  return Math.max(base, separation / (2 * Math.sin(step / 2)));
-}
-
-/**
  * Reparte `count` satélites por un semicírculo, con margen en los extremos.
  *
  * Para N satélites, el semicírculo (180°) se divide en N+1 huecos y se colocan
@@ -67,6 +47,58 @@ function anglesFor(count: number): number[] {
 }
 
 const toRadians = (degrees: number): number => (degrees * Math.PI) / 180;
+
+/** Un satélite colocado: en qué anillo va y en qué ángulo. */
+interface Slot {
+  radius: number;
+  angle: number;
+}
+
+/**
+ * Reparte `count` satélites en **anillos concéntricos** (RF-36.1).
+ *
+ * ## El problema que resuelve
+ *
+ * En un solo arco, el radio crece **lineal** con N: cada satélite nuevo empuja a
+ * todos hacia fuera para mantener la separación. Con 28 direcciones hacen falta
+ * ~1.200 px de radio, el grafo mide 2.440 de alto y el `fit` lo deja al 34 % —
+ * ilegible. Con 170 nodos, al 13 %.
+ *
+ * ## La idea
+ *
+ * Un anillo de radio `r` admite unos `π·r / separación` satélites. Si se llenan
+ * anillos sucesivos en vez de estirar uno, la capacidad total crece con el
+ * **área**, así que el radio necesario crece como **√N**. Las mismas 28
+ * direcciones caben en tres anillos de ~450-700 px: el grafo se queda en la
+ * mitad y se lee.
+ *
+ * Es lo que hace el sistema solar y no una fila de planetas: cuando hay muchos,
+ * se reparten en órbitas.
+ */
+function ringSlots(count: number, base: number, kind: string): Slot[] {
+  if (count === 0) return [];
+
+  const separation = MIN_SEPARATION[kind] ?? DEFAULT_SEPARATION;
+  const slots: Slot[] = [];
+  let radius = base;
+  let placed = 0;
+
+  while (placed < count) {
+    // Cuántos caben en este anillo sin pisarse. El −1 sale de `anglesFor`, que
+    // deja un hueco de margen en cada extremo del semicírculo.
+    const capacity = Math.max(1, Math.floor((Math.PI * radius) / separation) - 1);
+    const here = Math.min(capacity, count - placed);
+
+    for (const angle of anglesFor(here)) slots.push({ radius, angle });
+    placed += here;
+
+    // El anillo siguiente, a una separación del anterior: si estuvieran más
+    // juntos se pisarían en radial en vez de en tangencial, que da igual de mal.
+    radius += separation;
+  }
+
+  return slots;
+}
 
 /**
  * Coloca la tx `rootId` y sus direcciones vecinas.
@@ -108,11 +140,19 @@ export function layoutRadial(graph: Graph, rootId: string, options: LayoutOption
     .map((edge) => edge.to);
 
   const place = (ids: string[], side: -1 | 1): void => {
-    const angles = anglesFor(ids.length);
-    // El radio lo marca el satélite más grande del lado, y cada lado va por su
+    // El tamaño lo marca el satélite más grande del lado, y cada lado va por su
     // cuenta: una tx puede tener 2 entradas y 25 salidas.
     const biggest = ids.some((id) => nodes[id]?.kind === 'tx') ? 'tx' : 'address';
-    const sideRadius = options.radius ?? radiusFor(ids.length, radius, biggest);
+
+    /*
+     * Con un radio explícito, un solo anillo: quien lo pide sabe lo que quiere.
+     * Sin él, tantos anillos como hagan falta (RF-36.1) — es lo que mantiene el
+     * grafo dentro de la pantalla cuando hay muchos.
+     */
+    const slots: Slot[] =
+      options.radius === undefined
+        ? ringSlots(ids.length, radius, biggest)
+        : anglesFor(ids.length).map((angle) => ({ radius: options.radius ?? radius, angle }));
 
     ids.forEach((id, i) => {
       const node = nodes[id];
@@ -120,11 +160,14 @@ export function layoutRadial(graph: Graph, rootId: string, options: LayoutOption
       // `placed` también: ya tiene un sitio y moverlo desorientaría.
       if (node === undefined || isFixed(node)) return;
 
-      const radians = toRadians(angles[i] ?? 0);
+      const slot = slots[i];
+      if (slot === undefined) return;
+
+      const radians = toRadians(slot.angle);
       nodes[id] = {
         ...node,
-        x: center.x + side * sideRadius * Math.cos(radians),
-        y: center.y + sideRadius * Math.sin(radians),
+        x: center.x + side * slot.radius * Math.cos(radians),
+        y: center.y + slot.radius * Math.sin(radians),
         placed: true,
       };
     });

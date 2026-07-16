@@ -244,19 +244,19 @@ describe('una DIRECCIÓN en el centro (RF-02/RF-31)', () => {
     expect(spending!.x).toBeGreaterThan(CENTER.x);
   });
 
-  it('con 25 txs el radio crece: en un semicírculo de 235 px no caben', () => {
-    // 25 satélites en 180° son 6,9° entre vecinos. A radio 235 quedan a 28 px
-    // unos de otros y un nodo mide 180: se solaparían en un amasijo ilegible.
+  it('con 25 txs se usan varios anillos: en uno de 235 px no caben', () => {
+    // 25 satélites en un solo arco de 180° quedan a 6,9° unos de otros; a radio
+    // 235 eso son 28 px y un nodo de tx mide 180. Antes se resolvía estirando el
+    // radio (y el grafo se iba de la pantalla); ahora se reparten en anillos
+    // (RF-36.1). Lo que este test defiende es que **no caben en uno solo** —
+    // que no se pisen lo comprueba el de abajo, que es la intención de verdad.
     const laid = layoutRadial(addressGraph(25), addressNodeId('A'), { center: CENTER });
 
-    const txs = Object.values(laid.nodes).filter(
-      (node) => node.kind === 'tx' && !node.id.includes('ffff'),
-    );
-    const gaps = txs
-      .map((node) => Math.hypot(node.x - CENTER.x, node.y - CENTER.y))
-      .map((distance) => distance);
+    const radios = Object.values(laid.nodes)
+      .filter((node) => node.kind === 'tx' && !node.id.includes('ffff'))
+      .map((node) => Math.round(Math.hypot(node.x - CENTER.x, node.y - CENTER.y)));
 
-    for (const distance of gaps) expect(distance).toBeGreaterThan(DEFAULT_RADIUS);
+    expect(new Set(radios).size).toBeGreaterThan(1);
   });
 
   it('con 25 txs, dos vecinas nunca quedan encima', () => {
@@ -270,5 +270,104 @@ describe('una DIRECCIÓN en el centro (RF-02/RF-31)', () => {
       const gap = Math.hypot(sorted[i]!.x - sorted[i - 1]!.x, sorted[i]!.y - sorted[i - 1]!.y);
       expect(gap, `${sorted[i - 1]!.id} y ${sorted[i]!.id}`).toBeGreaterThan(100);
     }
+  });
+});
+
+describe('anillos concéntricos con muchos satélites (RF-36.1)', () => {
+  /** Una tx con `count` direcciones de entrada. */
+  const withInputs = (count: number): Graph => {
+    const root = txNodeId('a'.repeat(64));
+    const nodes: Graph['nodes'] = { [root]: { id: root, kind: 'tx', x: 0, y: 0 } };
+    const edges: Graph['edges'] = {};
+
+    for (let i = 0; i < count; i++) {
+      const id = addressNodeId(`in-${String(i)}`);
+      nodes[id] = { id, kind: 'address', x: 0, y: 0, address: `in-${String(i)}` };
+      edges[`${id}->${root}`] = {
+        id: `${id}->${root}`,
+        from: id,
+        to: root,
+        kind: 'input',
+        value: 1n,
+      };
+    }
+
+    return { nodes, edges };
+  };
+
+  const satellites = (graph: Graph) =>
+    Object.values(graph.nodes).filter((node) => node.kind === 'address');
+
+  const distances = (graph: Graph) =>
+    satellites(graph).map((node) => Math.hypot(node.x - CENTER.x, node.y - CENTER.y));
+
+  /** Distancia entre los dos satélites más próximos. */
+  function closestPair(graph: Graph): number {
+    const nodes = satellites(graph);
+    let min = Infinity;
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        min = Math.min(min, Math.hypot(nodes[i]!.x - nodes[j]!.x, nodes[i]!.y - nodes[j]!.y));
+      }
+    }
+
+    return min;
+  }
+
+  it('pocos satélites siguen en un solo anillo: el radial de siempre no cambia', () => {
+    // RF-05 y el mock aprobado: una tx con 2-3 direcciones se ve como siempre.
+    const laid = layoutRadial(withInputs(3), txNodeId('a'.repeat(64)), { center: CENTER });
+
+    const radios = distances(laid).map((d) => Math.round(d));
+    expect(new Set(radios).size).toBe(1);
+    expect(radios[0]).toBe(DEFAULT_RADIUS);
+  });
+
+  it('28 satélites se reparten en varios anillos', () => {
+    // El caso del ejemplo (aaeb5265): en un solo arco necesitan r≈1200 y el
+    // grafo se va a 2440 px de alto — el fit lo deja al 34 % y no se lee.
+    const laid = layoutRadial(withInputs(28), txNodeId('a'.repeat(64)), { center: CENTER });
+
+    const radios = new Set(distances(laid).map((d) => Math.round(d)));
+    expect(radios.size).toBeGreaterThan(1);
+  });
+
+  it('el radio crece como √N, no lineal: es lo que hace que quepa', () => {
+    const uno = layoutRadial(withInputs(28), txNodeId('a'.repeat(64)), { center: CENTER });
+    const maxRadio = Math.max(...distances(uno));
+
+    // En un solo arco harían falta ~1200 px. Con anillos tiene que bajar mucho.
+    expect(maxRadio).toBeLessThan(900);
+  });
+
+  it('y aun así no se pisan', () => {
+    // Repartir en anillos no vale de nada si los nodos acaban encima: lo que se
+    // gana en tamaño no se puede perder en legibilidad.
+    const laid = layoutRadial(withInputs(28), txNodeId('a'.repeat(64)), { center: CENTER });
+
+    expect(closestPair(laid)).toBeGreaterThan(100);
+  });
+
+  it('con 50 satélites (una página de RF-31) tampoco', () => {
+    const laid = layoutRadial(withInputs(50), txNodeId('a'.repeat(64)), { center: CENTER });
+
+    expect(closestPair(laid)).toBeGreaterThan(100);
+    expect(Math.max(...distances(laid))).toBeLessThan(1400);
+  });
+
+  it('todos siguen a su lado: las entradas, a la izquierda', () => {
+    // Los anillos no pueden romper RF-05: el flujo se lee de izquierda a derecha.
+    const laid = layoutRadial(withInputs(28), txNodeId('a'.repeat(64)), { center: CENTER });
+
+    for (const node of satellites(laid)) expect(node.x).toBeLessThan(CENTER.x);
+  });
+
+  it('el radio explícito sigue mandando', () => {
+    const laid = layoutRadial(withInputs(3), txNodeId('a'.repeat(64)), {
+      center: CENTER,
+      radius: 500,
+    });
+
+    expect(distances(laid).map((d) => Math.round(d))).toEqual([500, 500, 500]);
   });
 });

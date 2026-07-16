@@ -113,6 +113,19 @@ Cada requisito tiene ID `RF-XX`, prioridad (P1 imprescindible v1 / P2 alto valor
 - Se combina con el rastro de fondos (RF-18): un nodo se ve si pasa **los dos** filtros. «El rastro de este dinero, en marzo» es una pregunta legítima.
 - Cerrar la línea temporal devuelve todo a la vista.
 
+**RF-36 (P1) — Legibilidad con muchos nodos.** Un grafo que no cabe en la pantalla no informa de nada: si el usuario tiene que alejar al 13 % para verlo entero, ha dejado de ser una interfaz visual y es un manchurrón.
+
+> Especificado el 2026-07-16 tras medir el problema en la app. Los números que lo motivan: el ejemplo (30 nodos) queda al **34 %** de zoom y una dirección con 6 txs (170 nodos) al **13 %**, donde una etiqueta ocupa 5 px. **El 96-97 % de los nodos son direcciones y el 98-100 % de ellas aparecen una sola vez**: el grafo está dominado por nodos que no llevan a ningún sitio. Y el radio del radial crece **lineal** con el número de satélites, mientras el semicírculo los reparte en 180° verticales — el grafo crece a lo alto y la pantalla es apaisada.
+
+Cuatro mecanismos, complementarios. Los dos primeros cambian **cómo** se dibuja; los otros dos, **cuánto**:
+
+- **RF-36.1 — Anillos concéntricos.** Given una Tx con más satélites de los que caben en un arco, When se coloca, Then se reparten en varios anillos y el radio crece como √N en vez de lineal. Sigue siendo el radial de RF-05: entradas a la izquierda, salidas a la derecha.
+- **RF-36.2 — Detalle según el zoom.** Given un zoom por debajo del umbral de lectura, Then no se pinta el texto: a 13 % una etiqueta son 5 px de suciedad que emborronan sin informar. Los datos no cambian, solo lo que se dibuja.
+- **RF-36.3 — Clusters plegables.** Given un cluster (RF-19), When se pliega, Then sus direcciones se representan por una sola caja que dice cuántas lleva dentro; al desplegarlo vuelven. Lo decide el usuario.
+- **RF-36.4 — Direcciones de paso plegadas.** Given una Tx con muchas direcciones que solo tocan esa Tx (grado 1: no llevan a ningún sitio), When se pliegan, Then se representan por un nodo resumen `+N` que se despliega al pulsarlo.
+  - **Nunca se ocultan sin decirlo.** El nodo resumen es visible, dice cuántas esconde y se abre con un click. «El grafo es la interfaz» (docs/00) sigue en pie: plegar es una forma de mirar, no de esconder. Un grafo ilegible tampoco enseña esas direcciones — solo finge que sí.
+  - Plegar y desplegar **no tocan los datos**: no entran en el historial y Ctrl+Z no los deshace.
+
 ## 6. Requisitos no funcionales
 
 - **RNF-01** 60 fps de interacción con 300 nodos; expansión < 2 s con red normal (caché caliente < 200 ms).
