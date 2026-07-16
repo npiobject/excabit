@@ -65,10 +65,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # La historia entera: se escanea todo, no lo que cambió.
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Las claves caducadas del legacy en old/ están en allowlist; una
-          # clave nueva en src/ sigue rompiendo el build. Ver .gitleaks.toml.
-          GITLEAKS_CONFIG: ${{ github.workspace }}/.gitleaks.toml
+
+      # El binario y no `gitleaks-action`, que escanea **el rango de commits del
+      # evento**. En el primer push de un repo ese rango no existe (`before` es
+      # todo ceros), la acción se queda en «scanned ~0 bytes» y falla — y un gate
+      # de seguridad que se cae por culpa del evento que lo dispara, y que además
+      # no ha mirado ni un byte, no protege de nada. `gitleaks detect` mira la
+      # historia completa siempre, en cada push y da igual de dónde venga.
+      - name: Instalar gitleaks
+        run: |
+          VERSION=8.28.0
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
+            | tar -xz gitleaks
+          sudo install gitleaks /usr/local/bin/
+          gitleaks version
+
+      # Las claves caducadas del legacy en old/ están en allowlist; una clave
+      # nueva en src/ sigue rompiendo el build. Ver .gitleaks.toml.
+      # `--redact`: si algún día salta, el secreto no se copia al log público.
+      - name: Buscar secretos en toda la historia
+        run: gitleaks detect --config .gitleaks.toml --no-banner --redact --verbose
