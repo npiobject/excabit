@@ -115,7 +115,7 @@ selección acumulable, borrado de aristas huérfanas y compound nodes.
 | Paridad F-05..F-17 | ✅ grafo, expansión, drag, zoom/pan, selección, borrado, undo/redo |
 | Regresiones BUG-013/015/016 | ✅ en verde, más BUG-017 y BUG-020 |
 | E2E "buscar→expandir→mover→undo" | ✅ 20 E2E en CI contra el build real, red mockeada |
-| RNF-01 (60 fps / 300 nodos) | ⚠️ **~46 fps** (21,6 ms/frame). Ver abajo. |
+| RNF-01 (60 fps / 300 nodos) | ⚠️ **~46 fps** (21,6 ms/frame) al cerrar la fase. **Saldado el 2026-07-16**: ver [Fase 4 bis](#fase-4-bis--deuda-saldada-rnf-01-2026-07-16). |
 
 337 tests unit + 20 E2E. Cobertura global 98,6 % sentencias · 95,2 % ramas.
 
@@ -125,6 +125,11 @@ fluido y el umbral del test (64 ms) protege contra regresiones de orden de
 magnitud, pero el objetivo estricto queda pendiente: medir en un navegador con
 GPU real (la cifra es de chromium headless) y, si se confirma, optimizar en la
 Fase 4 con `hideEdgesOnViewport`/`textureOnViewport` o aligerando el estilado.
+
+> **Epílogo (2026-07-16)**: las tres hipótesis de arriba eran falsas. Ni el
+> estilado ni las aristas ni el motor tenían la culpa —era el minimapa— y
+> `hideEdgesOnViewport`/`textureOnViewport` no aportan nada medible. El
+> diagnóstico está en [Fase 4 bis](#fase-4-bis--deuda-saldada-rnf-01-2026-07-16).
 
 **Bug encontrado mirando la app, no los tests**: las txs vecinas aterrizaban
 todas sobre la raíz (un `center: {0,0}` fijo en el wiring). Los 17 E2E pasaban
@@ -184,6 +189,97 @@ Decisiones tomadas al implementar:
   compartiendo CPU con 5 workers, la cifra medía el paralelismo, no la app.
 
 **Sigue pendiente de la Fase 3**: RNF-01 real (~46 fps con 300 nodos, no 60).
+→ Saldado justo después; ver abajo.
+
+## Fase 4 bis — Deuda saldada: RNF-01 (2026-07-16)
+
+**60,0 fps con 300 nodos y 300 aristas, medidos con GPU real.** RNF-01 se cumple
+sin tocar el umbral: el objetivo era la app, no el listón.
+
+| Escenario (300 nodos/aristas) | Antes | Después |
+|---|---|---|
+| Pan, GPU real (Intel UHD, D3D11) | 18,79 ms · 53,2 fps | **16,67 ms · 60,0 fps** |
+| Pan, headless (SwiftShader, software) | 18,61 ms · 53,7 fps | **16,78 ms · 59,6 fps** |
+| Coste del minimapa por frame | 2,11 ms | **0,00–0,12 ms** |
+
+### Lo que decían los docs y lo que resultó ser
+
+Las tres hipótesis anotadas al cerrar la Fase 3 (`hideEdgesOnViewport`,
+`textureOnViewport`, aligerar el estilado) apuntaban al motor del grafo. **Las
+tres eran falsas.** Medidas por separado, `hideEdgesOnViewport` y
+`textureOnViewport` no mueven la aguja ni un 1 %: el grafo ya iba a 60 fps.
+
+**El culpable era el minimapa (RF-13)**, que se repintaba entero —300 nodos, 300
+aristas, un `boundingBox()` sobre 600 elementos y un `getBoundingClientRect()`—
+en cada frame de pan. Irónico: la pieza que se añadió *después* de medir los
+46 fps era la que los causaba, porque la medición de la Fase 3 se hizo con el
+shell mínimo, sin minimapa.
+
+### La trampa de medición: vsync
+
+**La cifra de «46 fps» estaba capada por vsync y nadie lo anotó.** Medir con
+`requestAnimationFrame` mide el intervalo *entre* frames, y el compositor no
+entrega frames más rápido que el refresco de la pantalla: a 60 Hz el suelo es
+16,67 ms. Un resultado de 16,67 ms no es «justo en el límite», es «el trabajo
+cabe y sobra». Eso hace la métrica interpretable —60 fps es el techo, no una
+aspiración— y explica por qué «sin minimapa» daba 16,66 ms clavados.
+
+### El arreglo: dos capas, porque hay dos ritmos
+
+El grafo en miniatura cambia al añadir, borrar o mover un nodo. El recuadro del
+viewport cambia 60 veces por segundo. Pintarlos en la misma capa obliga al lento
+al ritmo del rápido. Ahora el grafo vive en un canvas cacheado y un pan solo lo
+copia y dibuja el recuadro encima. Además, el tamaño se lee del `ResizeObserver`
+en vez de con `getBoundingClientRect()` por frame, que forzaba un recálculo de
+layout 60 veces por segundo para leer un número que casi nunca cambia (ese
+detalle solo valía 0,5 ms, pero era el último medio milisegundo).
+
+### El test que vale en CI no mide tiempo
+
+Un umbral en ms es rehén de la máquina: el estricto (18,5 ms) falló al correr
+tras los otros 62 tests pese a que la app daba 16,67 ms aislada. Dos respuestas:
+
+- **La medida se hace robusta**, no laxa: mediana de 5 tandas, descartando una de
+  calentamiento. La mediana ignora el hipo puntual pero no perdona una lentitud
+  real —si la app fuera lenta, todas las tandas lo serían.
+- **La garantía de CI es estructural, no temporal**: un test afirma que un pan
+  repinta el viewport y **no** repinta el grafo (`Minimap.stats`). No depende del
+  reloj, la máquina ni el vsync, y ataca la causa raíz: si alguien vuelve a
+  meter el grafo en el bucle de pan, se cae en CI. Antes del arreglo daba 32
+  repintados en un pan de 30 frames; ahora, 0.
+
+**Lección**: la deuda decía «optimizar el grafo» y el grafo no tenía nada que
+optimizar. Perfilar antes de optimizar no es ceremonia — las tres optimizaciones
+propuestas de buena fe habrían añadido complejidad para no ganar nada, mientras
+el coste real estaba en la pieza que nadie sospechaba.
+
+### Bug encontrado conduciendo la app, otra vez
+
+> Sin número de BUG-: el catálogo de [02](02-catalogo-bugs.md) inventaría el
+> legacy (BUG-001..025) y este es de la v2. Meterlo ahí confundiría «lo que
+> heredamos» con «lo que rompimos nosotros».
+
+El arreglo introdujo uno: colapsar el minimapa deja el contenedor a 0 px, y
+`drawImage` de un canvas de 0×0 **no es un no-op, es una excepción**. Saltaba en
+consola en cada click del toggle. Los 62 E2E pasaban —el minimapa se colapsaba
+«bien» y el error no se veía en pantalla— y lo cazó abrir la app y mirarla.
+
+Es la segunda vez en el proyecto (la primera, las vecinas apiladas de la Fase 3).
+Mismo patrón: **la suite comprobaba lo que la pieza es, no lo que hace**.
+
+**Causa de fondo: el minimapa (RF-13) se entregó en la Fase 4 sin tests propios.**
+Los únicos que lo tocaban eran los de RNF-01, y esos miden fps. Ahora tiene
+`tests/e2e/minimap.spec.ts` con 6 casos que comprueban que **pinta** (colores
+distintos en el canvas, no `toBeVisible()`: un canvas en blanco supera cualquier
+prueba de existencia), que el recuadro sigue al pan, que colapsar no lanza nada,
+que tras varios ciclos vuelve a pintar, que un grafo vacío no lo rompe y que el
+click navega. Los dos primeros verificados por mutación: reintroducido el bug, la
+suite lo caza.
+
+De paso, el caso del recuadro documenta algo que no era evidente: con el grafo
+entero a la vista el recuadro cae **fuera** del minimapa (el viewport abarca más
+que el grafo), así que el test hace zoom antes de mirar. Sin eso comprobaría un
+rectángulo invisible y pasaría siempre.
 
 ## Fase 5 — Persistencia y export (est. 1-2 semanas)
 

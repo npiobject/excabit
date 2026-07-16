@@ -34,6 +34,15 @@ declare global {
      * la consola — es software libre sin secretos que esconder.
      */
     excabit?: App;
+    /**
+     * El minimapa (RF-13). Lo monta el shell, no `App`: necesita un hueco del
+     * DOM y `App` no sabe de layout.
+     *
+     * Se expone por lo mismo que `excabit`: sus contadores de repintado son la
+     * única forma de afirmar que un pan no rehace el grafo en miniatura, que es
+     * de lo que dependen los 60 fps de RNF-01.
+     */
+    excabitMinimap?: Minimap;
   }
 }
 
@@ -102,7 +111,7 @@ function boot(): void {
     },
   });
   const minimap = new Minimap(requireElement('minimapBody'), app.adapter.cy);
-  void minimap;
+  window.excabitMinimap = minimap;
 
   const statusCounts = requireElement('statusCounts');
   const statusMessage = requireElement('statusMessage');
